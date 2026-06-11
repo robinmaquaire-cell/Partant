@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+/* Design tokens « Partant ? » — repris du prototype validé */
+@theme {
+  --color-ink: #10302c;
+  --color-ink-soft: #3d5a55;
+  --color-paper: #f1f6f4;
+  --color-card: #ffffff;
+  --color-river: #2c7da0;
+  --color-pine: #0f4c4c;
+  --color-signal: #ff6b35;
+  --color-sand: #e8e1d3;
+  --color-ok: #2e9e6b;
+  --color-refuse: #c0533e;
+  --color-line: #dce6e2;
+}
+
+@theme inline {
+  --font-display: var(--font-bricolage), system-ui, sans-serif;
+  --font-body: var(--font-public-sans), system-ui, sans-serif;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
