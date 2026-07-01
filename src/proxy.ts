@@ -38,7 +38,11 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isPublic = path.startsWith("/connexion") || path.startsWith("/auth");
+  // /j/… = pages d'invitation, accessibles sans compte (c'est le parcours d'inscription).
+  const isPublic =
+    path.startsWith("/connexion") ||
+    path.startsWith("/auth") ||
+    path.startsWith("/j/");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
