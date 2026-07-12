@@ -49,6 +49,30 @@ export async function updateProfile(input: {
   return { ok: true };
 }
 
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export async function deleteTemplate(
+  templateId: string
+): Promise<UpdateProfileResult> {
+  if (!UUID_RE.test(templateId)) return { ok: false, error: "Requête invalide." };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase
+    .from("templates")
+    .delete()
+    .eq("id", templateId);
+  if (error)
+    return { ok: false, error: "La suppression a échoué. Réessaie dans un instant." };
+
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

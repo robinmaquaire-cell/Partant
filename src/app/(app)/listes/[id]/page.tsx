@@ -49,6 +49,24 @@ export default async function ListeDetailPage(props: {
     .limit(1)
     .maybeSingle();
 
+  const { data: eventLinks } = await supabase
+    .from("event_lists")
+    .select("events(id, title, event_date, event_time)")
+    .eq("list_id", id);
+  const listEvents = ((eventLinks ?? []) as unknown as {
+    events: {
+      id: string;
+      title: string;
+      event_date: string;
+      event_time: string;
+    } | null;
+  }[])
+    .map((el) => el.events)
+    .filter((e): e is NonNullable<typeof e> => e !== null)
+    .sort((a, b) =>
+      (a.event_date + a.event_time).localeCompare(b.event_date + b.event_time)
+    );
+
   return (
     <div className="pb-8">
       <Link href="/listes" className="inline-block text-sm font-bold mb-3 text-ink-soft">
@@ -84,9 +102,29 @@ export default async function ListeDetailPage(props: {
       />
 
       <h3 className="font-extrabold mb-2 font-display">Événements de la liste</h3>
-      <p className="text-sm text-ink-soft mb-6">
-        🚧 Les événements arrivent au jalon 3 du chantier.
-      </p>
+      {listEvents.length === 0 && (
+        <p className="text-sm text-ink-soft mb-6">
+          Aucun événement pour l&apos;instant.
+        </p>
+      )}
+      <div className="mb-6">
+        {listEvents.map((ev) => (
+          <Link
+            key={ev.id}
+            href={`/evenements/${ev.id}`}
+            className="rounded-xl px-4 py-3 mb-2 flex justify-between items-center bg-card border-[1.5px] border-line"
+          >
+            <span className="font-semibold text-sm">{ev.title}</span>
+            <span className="text-xs font-bold text-ink-soft">
+              {new Date(ev.event_date + "T00:00").toLocaleDateString("fr-FR", {
+                day: "numeric",
+                month: "short",
+              })}{" "}
+              · {ev.event_time.slice(0, 5)}
+            </span>
+          </Link>
+        ))}
+      </div>
 
       <LeaveListButton listId={list.id} lastMember={members.length === 1} />
     </div>
