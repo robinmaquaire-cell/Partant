@@ -128,7 +128,7 @@ begin
   values (v_id, v_uid, 'admin');
 
   insert into list_invites (token, list_id, created_by)
-  values (encode(gen_random_bytes(12), 'hex'), v_id, v_uid);
+  values (replace(gen_random_uuid()::text, '-', ''), v_id, v_uid);
 
   return v_id;
 end;
