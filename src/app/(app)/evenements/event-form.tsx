@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { parseGps } from "@/lib/parse-gps";
+import { GpsMap } from "@/components/gps-map";
 import {
   createEvent,
   updateEvent,
@@ -75,6 +76,7 @@ export function EventForm({
   );
   const [gpsText, setGpsText] = useState("");
   const [gpsErr, setGpsErr] = useState("");
+  const [mapOpen, setMapOpen] = useState(false);
   const [max, setMax] = useState(init?.max ?? 10);
   const [collaborative, setCollaborative] = useState(
     init?.collaborative ?? false
@@ -115,27 +117,6 @@ export function EventForm({
       }))
     );
     setUsedTpl(t.id);
-  };
-
-  const locate = () => {
-    setGpsErr("");
-    if (!navigator.geolocation) {
-      setGpsErr(
-        "La géolocalisation n'est pas disponible — colle un point Google Maps à la place."
-      );
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) =>
-        setCoords({
-          lat: +pos.coords.latitude.toFixed(5),
-          lng: +pos.coords.longitude.toFixed(5),
-        }),
-      () =>
-        setGpsErr(
-          "Position inaccessible (autorise la localisation dans ton navigateur), ou colle un point Google Maps à la place."
-        )
-    );
   };
 
   const toggleList = (id: string) =>
@@ -261,18 +242,31 @@ export function EventForm({
 
       <div className="mb-3">
         <div className={label}>Point GPS</div>
-        {coords ? (
+        {mapOpen ? (
+          <GpsMap
+            initial={coords}
+            onPick={(c, address) => {
+              setCoords(c);
+              setGpsErr("");
+              // L'adresse trouvée remplit le lieu s'il est encore vide.
+              if (address && !location.trim()) setLocation(address);
+            }}
+            onClose={() => setMapOpen(false)}
+          />
+        ) : coords ? (
           <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-ok/10 border-[1.5px] border-ok/40">
             <div>
               <div className="text-sm font-bold text-ok">📍 Point enregistré</div>
-              <a
-                href={`https://www.openstreetmap.org/?mlat=${coords.lat}&mlon=${coords.lng}#map=16/${coords.lat}/${coords.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs underline text-ink-soft"
-              >
-                {coords.lat}, {coords.lng} — vérifier sur la carte ↗
-              </a>
+              <div className="text-xs text-ink-soft">
+                {coords.lat}, {coords.lng} —{" "}
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => setMapOpen(true)}
+                >
+                  ajuster sur la carte
+                </button>
+              </div>
             </div>
             <button
               type="button"
@@ -290,10 +284,10 @@ export function EventForm({
           <>
             <button
               type="button"
-              onClick={locate}
+              onClick={() => setMapOpen(true)}
               className="w-full px-4 py-2.5 rounded-xl font-bold bg-ink text-paper transition-transform active:scale-95"
             >
-              📍 Autour de moi
+              📍 Autour de moi — choisir sur la carte
             </button>
             <input
               className={`${input} mt-2`}
