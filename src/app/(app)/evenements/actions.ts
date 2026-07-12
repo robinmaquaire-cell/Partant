@@ -74,10 +74,8 @@ function checkEventInput(input: EventInput): string | null {
       return "Chaque objet de matériel doit avoir un nom (60 caractères max).";
     if (it.kind !== "indiv" && it.kind !== "collectif")
       return "Type de matériel invalide.";
-    if (
-      it.kind === "collectif" &&
-      (!Number.isInteger(it.qty) || (it.qty as number) < 1 || (it.qty as number) > 999)
-    )
+    const qty = it.qty ?? 1;
+    if (!Number.isInteger(qty) || qty < 1 || qty > 999)
       return "La quantité doit être entre 1 et 999.";
   }
   return null;
@@ -87,7 +85,7 @@ function equipmentJson(equipment: EquipmentDraft[]) {
   return equipment.map((it) => ({
     name: it.name.trim(),
     kind: it.kind,
-    qty: it.kind === "collectif" ? it.qty : null,
+    qty: it.qty ?? 1,
   }));
 }
 

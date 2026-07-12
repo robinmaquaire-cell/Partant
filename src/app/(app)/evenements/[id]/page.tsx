@@ -93,6 +93,7 @@ export default async function EvenementDetailPage(props: {
     .map((it) => ({
       id: it.id,
       name: it.name,
+      qty: it.qty ?? 1,
       iHave: it.equipment_confirmations.some((c) => c.user_id === user.id),
       confirmedNames: it.equipment_confirmations.map((c) => nameOf(c.user_id)),
     }));

@@ -11,6 +11,7 @@ import {
 type IndivItem = {
   id: string;
   name: string;
+  qty: number; // quantité à prévoir par personne
   iHave: boolean;
   confirmedNames: string[];
 };
@@ -66,7 +67,9 @@ export function EquipmentSection({
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-sm">
                     {item.name}{" "}
-                    <span className="text-ink-soft">· 1 par personne</span>
+                    <span className="text-ink-soft">
+                      · {item.qty} par personne
+                    </span>
                   </div>
                   <div className="text-xs text-ink-soft">
                     {item.confirmedNames.length > 0
@@ -86,7 +89,13 @@ export function EquipmentSection({
                       : "text-ink-soft border-[1.5px] border-line"
                   }`}
                 >
-                  {item.iHave ? "J'ai le mien ✓" : "J'ai le mien"}
+                  {item.qty > 1
+                    ? item.iHave
+                      ? "J'ai les miens ✓"
+                      : "J'ai les miens"
+                    : item.iHave
+                      ? "J'ai le mien ✓"
+                      : "J'ai le mien"}
                 </button>
               </div>
             ))}

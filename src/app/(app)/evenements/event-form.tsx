@@ -111,7 +111,7 @@ export function EventForm({
       (p.equipment ?? []).map((e) => ({
         name: e.name,
         kind: e.kind,
-        qty: e.kind === "collectif" ? e.qty ?? 1 : null,
+        qty: e.qty ?? 1,
       }))
     );
     setUsedTpl(t.id);
@@ -150,7 +150,7 @@ export function EventForm({
       {
         name: eqName.trim(),
         kind: eqKind,
-        qty: eqKind === "collectif" ? Math.max(1, eqQty || 1) : null,
+        qty: Math.max(1, eqQty || 1),
       },
     ]);
     setEqName("");
@@ -346,7 +346,9 @@ export function EventForm({
             <span>
               {it.name}{" "}
               <span className="text-ink-soft">
-                {it.kind === "indiv" ? "· 1 par personne" : `×${it.qty}`}
+                {it.kind === "indiv"
+                  ? `· ${it.qty ?? 1} par personne`
+                  : `×${it.qty ?? 1}`}
               </span>
             </span>
             <button
@@ -370,7 +372,9 @@ export function EventForm({
             <span>
               {it.name}{" "}
               <span className="text-ink-soft">
-                {it.kind === "indiv" ? "· 1 par personne" : `×${it.qty}`}
+                {it.kind === "indiv"
+                  ? `· ${it.qty ?? 1} par personne`
+                  : `×${it.qty ?? 1}`}
               </span>
             </span>
             <button
@@ -387,7 +391,7 @@ export function EventForm({
           {(
             [
               ["collectif", "Pour le groupe"],
-              ["indiv", "Un par personne"],
+              ["indiv", "Par personne"],
             ] as const
           ).map(([k, lab]) => (
             <button
@@ -406,28 +410,28 @@ export function EventForm({
         </div>
         <div className="flex gap-2">
           <input
-            className={`${input} flex-1`}
+            className={`${input} flex-1 min-w-0`}
             value={eqName}
             onChange={(e) => setEqName(e.target.value)}
             placeholder={
               eqKind === "indiv" ? "ex. Gilet de sauvetage" : "ex. Bidon étanche"
             }
           />
-          {eqKind === "collectif" && (
-            <input
-              type="number"
-              min={1}
-              max={999}
-              className={`${input} w-16`}
-              value={eqQty}
-              onChange={(e) => setEqQty(Number(e.target.value))}
-              aria-label="Quantité"
-            />
-          )}
+          <input
+            type="number"
+            min={1}
+            max={999}
+            className="w-16 shrink-0 text-center bg-card border-[1.5px] border-line rounded-xl px-2 py-2.5 text-[15px] text-ink outline-none focus:border-river"
+            value={eqQty}
+            onChange={(e) => setEqQty(Number(e.target.value))}
+            aria-label={
+              eqKind === "indiv" ? "Quantité par personne" : "Quantité totale"
+            }
+          />
           <button
             type="button"
             onClick={addEquipment}
-            className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper"
+            className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
           >
             +
           </button>
