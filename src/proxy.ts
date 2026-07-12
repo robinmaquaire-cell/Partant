@@ -59,6 +59,26 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Chaque compte doit avoir un pseudo : tant qu'il manque, direction le profil.
+  if (
+    user &&
+    !isPublic &&
+    !path.startsWith("/profil") &&
+    !path.startsWith("/api/")
+  ) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pseudo")
+      .eq("id", user.id)
+      .maybeSingle();
+    if (!profile?.pseudo?.trim()) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/profil";
+      url.search = "?bienvenue=1";
+      return NextResponse.redirect(url);
+    }
+  }
+
   return response;
 }
 

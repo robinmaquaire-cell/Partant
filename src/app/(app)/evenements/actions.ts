@@ -185,6 +185,52 @@ export async function deleteEvent(
   redirect("/");
 }
 
+// Promouvoir un partant en organisateur (réservé aux organisateurs).
+export async function addOrganizer(
+  eventId: string,
+  userId: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId) || !UUID_RE.test(userId))
+    return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("add_organizer", {
+    p_event: eventId,
+    p_user: userId,
+  });
+  if (error)
+    return {
+      ok: false,
+      error: frenchError(error.message, "La nomination a échoué."),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true };
+}
+
+// Se désinscrire d'un événement qu'on organise.
+export async function resignOrganizer(
+  eventId: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId)) return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("remove_organizer", {
+    p_event: eventId,
+  });
+  if (error)
+    return {
+      ok: false,
+      error: frenchError(error.message, "La désinscription a échoué."),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
+  revalidatePath("/");
+  return { ok: true };
+}
+
 export async function setRsvp(
   eventId: string,
   status: "yes" | "no"

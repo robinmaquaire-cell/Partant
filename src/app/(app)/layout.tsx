@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TabBar } from "@/components/tab-bar";
+import { Avatar } from "@/components/avatar";
 
 export default async function AppLayout({
   children,
@@ -22,11 +23,9 @@ export default async function AppLayout({
 
   const { data: profile } = await supabase
     .from("profiles")
-    .select("pseudo")
+    .select("pseudo, avatar_url")
     .eq("id", user.id)
     .single();
-
-  const initial = (profile?.pseudo || user.email || "?")[0].toUpperCase();
 
   return (
     <div className="min-h-screen pb-24">
@@ -37,11 +36,12 @@ export default async function AppLayout({
         >
           Partant<span className="text-signal"> ?</span>
         </Link>
-        <Link
-          href="/profil"
-          className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-sm bg-pine text-paper"
-        >
-          {initial}
+        <Link href="/profil" aria-label="Mon profil">
+          <Avatar
+            pseudo={profile?.pseudo || user.email || "?"}
+            url={profile?.avatar_url}
+            size={36}
+          />
         </Link>
       </header>
       <main className="px-5 max-w-lg mx-auto w-full">{children}</main>

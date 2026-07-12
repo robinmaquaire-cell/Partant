@@ -2,9 +2,11 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RelTime } from "@/components/rel-time";
+import { Avatar } from "@/components/avatar";
 import { RsvpBar } from "./rsvp-bar";
 import { EquipmentSection } from "./equipment-section";
 import { OwnerActions } from "./owner-actions";
+import { OrganizersSection } from "./organizers-section";
 
 type EventRow = {
   id: string;
@@ -19,6 +21,7 @@ type EventRow = {
   collaborative: boolean;
   created_by: string;
   event_lists: { lists: { id: string; name: string; color: string } | null }[];
+  event_organizers: { user_id: string }[];
   rsvps: { user_id: string; status: "yes" | "no" }[];
   equipment_items: {
     id: string;
@@ -47,6 +50,7 @@ export default async function EvenementDetailPage(props: {
       `id, title, description, event_date, event_time, location_text, lat, lng,
        max_participants, collaborative, created_by,
        event_lists(lists(id, name, color)),
+       event_organizers(user_id),
        rsvps(user_id, status),
        equipment_items(id, name, kind, qty, added_by,
          equipment_contributions(user_id, qty),
@@ -57,9 +61,10 @@ export default async function EvenementDetailPage(props: {
   if (!data) notFound();
   const ev = data as unknown as EventRow;
 
-  // Tous les pseudos utiles en une seule requête.
+  // Tous les pseudos et photos utiles en une seule requête.
   const userIds = new Set<string>([ev.created_by]);
   ev.rsvps.forEach((r) => userIds.add(r.user_id));
+  ev.event_organizers.forEach((o) => userIds.add(o.user_id));
   ev.equipment_items.forEach((it) => {
     if (it.added_by) userIds.add(it.added_by);
     it.equipment_contributions.forEach((c) => userIds.add(c.user_id));
@@ -67,21 +72,34 @@ export default async function EvenementDetailPage(props: {
   });
   const { data: profiles } = await supabase
     .from("profiles")
-    .select("id, pseudo")
+    .select("id, pseudo, avatar_url")
     .in("id", [...userIds]);
+  const profileOf = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { pseudo: p.pseudo || "(sans pseudo)", avatarUrl: p.avatar_url ?? null },
+    ])
+  );
   const pseudoOf = new Map(
-    (profiles ?? []).map((p) => [p.id, p.pseudo || "(sans pseudo)"])
+    [...profileOf].map(([id, p]) => [id, p.pseudo])
   );
   const nameOf = (uid: string) =>
     uid === user.id ? "toi" : pseudoOf.get(uid) || "?";
+  const personOf = (uid: string) => ({
+    userId: uid,
+    pseudo: pseudoOf.get(uid) || "?",
+    avatarUrl: profileOf.get(uid)?.avatarUrl ?? null,
+  });
 
   const lists = ev.event_lists
     .map((el) => el.lists)
     .filter((l): l is NonNullable<typeof l> => l !== null);
   const color = lists[0]?.color || "#2C7DA0";
+  const organizerIds = new Set(ev.event_organizers.map((o) => o.user_id));
   const yesList = ev.rsvps.filter((r) => r.status === "yes");
+  const partants = yesList.filter((r) => !organizerIds.has(r.user_id));
   const myStatus = ev.rsvps.find((r) => r.user_id === user.id)?.status ?? null;
-  const isCreator = ev.created_by === user.id;
+  const isOrganizer = organizerIds.has(user.id);
 
   const longDate = new Date(ev.event_date + "T00:00").toLocaleDateString(
     "fr-FR",
@@ -157,7 +175,7 @@ export default async function EvenementDetailPage(props: {
         </div>
       </div>
 
-      {isCreator && <OwnerActions eventId={ev.id} />}
+      {isOrganizer && <OwnerActions eventId={ev.id} />}
 
       {ev.description && (
         <p className="mb-5 text-[15px] leading-relaxed whitespace-pre-line">
@@ -165,21 +183,34 @@ export default async function EvenementDetailPage(props: {
         </p>
       )}
 
+      <OrganizersSection
+        eventId={ev.id}
+        isOrganizer={isOrganizer}
+        organizers={ev.event_organizers.map((o) => personOf(o.user_id))}
+        candidates={partants.map((r) => personOf(r.user_id))}
+      />
+
       <h3 className="font-extrabold mb-2 font-display">
         Partants — {yesList.length}/{ev.max_participants}
       </h3>
       <div className="flex flex-wrap gap-2 mb-6">
-        {yesList.map((r) => (
-          <span
-            key={r.user_id}
-            className="px-3 py-1 rounded-full text-sm font-semibold bg-card border-[1.5px] border-line"
-          >
-            {r.user_id === user.id ? "Toi" : pseudoOf.get(r.user_id) || "?"}
-          </span>
-        ))}
-        {yesList.length === 0 && (
+        {partants.map((r) => {
+          const p = personOf(r.user_id);
+          return (
+            <span
+              key={r.user_id}
+              className="pl-1 pr-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-card border-[1.5px] border-line"
+            >
+              <Avatar pseudo={p.pseudo} url={p.avatarUrl} size={24} />
+              {r.user_id === user.id ? "Toi" : p.pseudo}
+            </span>
+          );
+        })}
+        {partants.length === 0 && (
           <span className="text-sm text-ink-soft">
-            Personne pour l&apos;instant — sois le·la premier·ère !
+            {yesList.length > 0
+              ? "Les organisateurs sont prêts — à qui le tour ?"
+              : "Personne pour l'instant — sois le·la premier·ère !"}
           </span>
         )}
       </div>
@@ -195,6 +226,7 @@ export default async function EvenementDetailPage(props: {
         eventId={ev.id}
         myStatus={myStatus}
         full={yesList.length >= ev.max_participants && myStatus !== "yes"}
+        organizer={isOrganizer}
       />
     </div>
   );

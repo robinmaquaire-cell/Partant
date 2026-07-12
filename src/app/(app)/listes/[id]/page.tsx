@@ -8,7 +8,7 @@ import { LeaveListButton } from "./leave-list-button";
 type MemberRow = {
   user_id: string;
   role: "admin" | "member";
-  profiles: { pseudo: string } | null;
+  profiles: { pseudo: string; avatar_url: string | null } | null;
 };
 
 export default async function ListeDetailPage(props: {
@@ -30,7 +30,7 @@ export default async function ListeDetailPage(props: {
 
   const { data: memberData } = await supabase
     .from("list_members")
-    .select("user_id, role, profiles(pseudo)")
+    .select("user_id, role, profiles(pseudo, avatar_url)")
     .eq("list_id", id)
     .order("joined_at", { ascending: true });
 
@@ -97,6 +97,7 @@ export default async function ListeDetailPage(props: {
         members={members.map((m) => ({
           userId: m.user_id,
           pseudo: m.profiles?.pseudo || "(sans pseudo)",
+          avatarUrl: m.profiles?.avatar_url ?? null,
           role: m.role,
         }))}
       />

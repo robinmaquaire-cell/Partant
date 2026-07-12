@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { TemplatesSection } from "./templates-section";
+import { AvatarUpload } from "./avatar-upload";
 
 type TemplateRow = {
   id: string;
@@ -9,7 +10,10 @@ type TemplateRow = {
   payload: { event_time?: string; location_text?: string } | null;
 };
 
-export default async function ProfilPage() {
+export default async function ProfilPage(props: {
+  searchParams: Promise<{ bienvenue?: string }>;
+}) {
+  const { bienvenue } = await props.searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -19,7 +23,7 @@ export default async function ProfilPage() {
   const [{ data: profile }, { data: templates }] = await Promise.all([
     supabase
       .from("profiles")
-      .select("pseudo, contact_mode, contact")
+      .select("pseudo, contact_mode, contact, avatar_url")
       .eq("id", user.id)
       .single(),
     supabase
@@ -30,6 +34,20 @@ export default async function ProfilPage() {
 
   return (
     <>
+      {bienvenue && !profile?.pseudo?.trim() && (
+        <div className="rounded-2xl p-4 mb-4 bg-signal/10 border-[1.5px] border-signal/40">
+          <div className="font-bold text-sm">👋 Bienvenue !</div>
+          <p className="text-sm text-ink-soft">
+            Choisis ton pseudo pour commencer — c&apos;est lui que tes amis
+            verront sur les événements.
+          </p>
+        </div>
+      )}
+      <AvatarUpload
+        userId={user.id}
+        pseudo={profile?.pseudo ?? ""}
+        avatarUrl={profile?.avatar_url ?? null}
+      />
       <ProfileForm
         initial={{
           pseudo: profile?.pseudo ?? "",

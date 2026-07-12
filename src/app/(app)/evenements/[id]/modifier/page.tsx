@@ -23,13 +23,16 @@ export default async function ModifierEvenementPage(props: {
   const { data: ev } = await supabase
     .from("events")
     .select(
-      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, created_by, event_lists(list_id), equipment_items(id, name, kind, qty, added_by)"
+      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, added_by)"
     )
     .eq("id", id)
     .maybeSingle();
   if (!ev) notFound();
-  // Seul le créateur peut modifier : les autres retournent au détail.
-  if (ev.created_by !== user.id) redirect(`/evenements/${id}`);
+  // Seuls les organisateurs peuvent modifier : les autres retournent au détail.
+  const isOrganizer = (ev.event_organizers ?? []).some(
+    (o: { user_id: string }) => o.user_id === user.id
+  );
+  if (!isOrganizer) redirect(`/evenements/${id}`);
 
   const { data: lists } = await supabase.rpc("my_lists");
   const equipment = (ev.equipment_items ?? []) as EquipmentRow[];

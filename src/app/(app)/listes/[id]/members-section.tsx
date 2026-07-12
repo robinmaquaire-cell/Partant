@@ -1,9 +1,15 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Avatar } from "@/components/avatar";
 import { addMemberByEmail, promoteMember, removeMember } from "./actions";
 
-type Member = { userId: string; pseudo: string; role: "admin" | "member" };
+type Member = {
+  userId: string;
+  pseudo: string;
+  avatarUrl: string | null;
+  role: "admin" | "member";
+};
 
 export function MembersSection({
   listId,
@@ -51,8 +57,9 @@ export function MembersSection({
         {members.map((m) => (
           <span
             key={m.userId}
-            className="px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-card border-[1.5px] border-line"
+            className="pl-1 pr-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 bg-card border-[1.5px] border-line"
           >
+            <Avatar pseudo={m.pseudo} url={m.avatarUrl} size={24} />
             {m.pseudo}
             {m.userId === myUserId && " (toi)"}
             {m.role === "admin" && (
