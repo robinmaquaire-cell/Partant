@@ -1,6 +1,34 @@
 import { NextResponse } from "next/server";
-import type { EmailOtpType } from "@supabase/supabase-js";
+import type { EmailOtpType, SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { sendEmails, welcomeEmail } from "@/lib/email";
+
+// E-mail de bienvenue à la première connexion, une seule fois par compte
+// (marqueur « welcomed » + compte créé il y a moins d'une heure).
+async function maybeSendWelcome(supabase: SupabaseClient) {
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.email || user.user_metadata?.welcomed) return;
+    if (Date.now() - new Date(user.created_at).getTime() > 60 * 60 * 1000)
+      return;
+    await supabase.auth.updateUser({ data: { welcomed: true } });
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("pseudo")
+      .eq("id", user.id)
+      .single();
+    await sendEmails([
+      welcomeEmail({
+        to: user.email,
+        pseudo: profile?.pseudo?.trim() || "à bord",
+      }),
+    ]);
+  } catch (e) {
+    console.error("[notif] E-mail de bienvenue échoué :", e);
+  }
+}
 
 // Point d'arrivée du lien magique : vérifie le jeton reçu par e-mail
 // puis ouvre la session et renvoie vers l'application.
@@ -20,12 +48,18 @@ export async function GET(request: Request) {
       type,
       token_hash: tokenHash,
     });
-    if (!error) return NextResponse.redirect(new URL(next, origin));
+    if (!error) {
+      await maybeSendWelcome(supabase);
+      return NextResponse.redirect(new URL(next, origin));
+    }
   }
 
   if (code) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) return NextResponse.redirect(new URL(next, origin));
+    if (!error) {
+      await maybeSendWelcome(supabase);
+      return NextResponse.redirect(new URL(next, origin));
+    }
   }
 
   return NextResponse.redirect(

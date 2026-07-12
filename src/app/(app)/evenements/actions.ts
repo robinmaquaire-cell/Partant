@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { notifyEventCreated } from "@/lib/notifications";
 
 type ActionResult = { ok: true } | { ok: false; error: string };
 
@@ -121,6 +122,9 @@ export async function createEvent(
       ok: false,
       error: frenchError(error?.message, "La création a échoué. Réessaie dans un instant."),
     };
+
+  // Prévenir les membres par e-mail (ne bloque jamais la création).
+  await notifyEventCreated(data);
 
   revalidatePath("/");
   redirect(`/evenements/${data}`);

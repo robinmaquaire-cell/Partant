@@ -42,7 +42,10 @@ export async function proxy(request: NextRequest) {
   const isPublic =
     path.startsWith("/connexion") ||
     path.startsWith("/auth") ||
-    path.startsWith("/j/");
+    path.startsWith("/j/") ||
+    // La tâche planifiée Vercel n'a pas de session : elle est protégée
+    // par son propre secret (CRON_SECRET) dans la route.
+    path.startsWith("/api/cron/");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
