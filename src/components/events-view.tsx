@@ -5,19 +5,44 @@ import Link from "next/link";
 import { EventCard, type EventCardData } from "./event-card";
 import { CalendarView } from "./calendar-view";
 
-// Onglet Événements : bascule entre la vue liste (à venir) et le calendrier.
+type StatusFilter = "yes" | "none" | null;
+
+// Onglet Événements : bascule liste/calendrier + filtres par liste de
+// diffusion et par ma réponse.
 export function EventsView({ events }: { events: EventCardData[] }) {
   const [view, setView] = useState<"list" | "cal">("list");
+  const [listFilter, setListFilter] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(null);
+
+  // Les listes présentes dans les événements affichables, sans doublon.
+  const allLists = new Map<string, { id: string; name: string; color: string }>();
+  for (const e of events)
+    for (const l of e.lists) if (!allLists.has(l.id)) allLists.set(l.id, l);
+  const listOptions = [...allLists.values()].sort((a, b) =>
+    a.name.localeCompare(b.name, "fr")
+  );
+
+  const filtered = events.filter((e) => {
+    if (listFilter && !e.lists.some((l) => l.id === listFilter)) return false;
+    if (statusFilter === "yes" && e.myStatus !== "yes") return false;
+    if (statusFilter === "none" && e.myStatus !== null) return false;
+    return true;
+  });
 
   const todayKey = (() => {
     const t = new Date();
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   })();
-  const upcoming = events.filter((e) => e.event_date >= todayKey);
+  const upcoming = filtered.filter((e) => e.event_date >= todayKey);
+
+  const chip = (active: boolean) =>
+    `shrink-0 px-3 py-1 rounded-full text-sm font-semibold border-[1.5px] transition-colors ${
+      active ? "bg-ink text-paper border-ink" : "bg-card text-ink-soft border-line"
+    }`;
 
   return (
     <div className="pb-8">
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-xl font-extrabold font-display">À venir</h2>
         <div className="flex items-center gap-2">
           <div className="flex rounded-xl overflow-hidden border-[1.5px] border-line">
@@ -49,13 +74,69 @@ export function EventsView({ events }: { events: EventCardData[] }) {
         </div>
       </div>
 
+      {/* Filtres : n'apparaissent que s'il y a matière à filtrer. */}
+      {events.length > 0 && (listOptions.length > 1 || events.length > 2) && (
+        <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-5 px-5">
+          <button
+            type="button"
+            onClick={() => {
+              setListFilter(null);
+              setStatusFilter(null);
+            }}
+            className={chip(listFilter === null && statusFilter === null)}
+          >
+            Tous
+          </button>
+          {listOptions.length > 1 &&
+            listOptions.map((l) => (
+              <button
+                key={l.id}
+                type="button"
+                onClick={() =>
+                  setListFilter(listFilter === l.id ? null : l.id)
+                }
+                className={chip(listFilter === l.id)}
+                style={
+                  listFilter === l.id
+                    ? { background: l.color, borderColor: l.color }
+                    : undefined
+                }
+              >
+                <span
+                  className="inline-block w-2 h-2 rounded-full mr-1.5 align-middle"
+                  style={{ background: listFilter === l.id ? "#fff" : l.color }}
+                />
+                {l.name}
+              </button>
+            ))}
+          <button
+            type="button"
+            onClick={() => setStatusFilter(statusFilter === "yes" ? null : "yes")}
+            className={chip(statusFilter === "yes")}
+          >
+            Partant ✓
+          </button>
+          <button
+            type="button"
+            onClick={() =>
+              setStatusFilter(statusFilter === "none" ? null : "none")
+            }
+            className={chip(statusFilter === "none")}
+          >
+            Sans réponse
+          </button>
+        </div>
+      )}
+
       {view === "cal" ? (
-        <CalendarView events={events} />
+        <CalendarView events={filtered} />
       ) : (
         <>
           {upcoming.length === 0 && (
             <div className="text-center py-12 text-ink-soft">
-              Aucun événement à venir. Crée le premier !
+              {events.length === 0
+                ? "Aucun événement à venir. Crée le premier !"
+                : "Rien ne correspond à ces filtres."}
             </div>
           )}
           {upcoming.map((ev) => (
