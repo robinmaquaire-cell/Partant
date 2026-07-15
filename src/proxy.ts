@@ -43,6 +43,9 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/connexion") ||
     path.startsWith("/auth") ||
     path.startsWith("/j/") ||
+    path.startsWith("/conditions") ||
+    path === "/sw.js" ||
+    path === "/manifest.webmanifest" ||
     // La tâche planifiée Vercel n'a pas de session : elle est protégée
     // par son propre secret (CRON_SECRET) dans la route.
     path.startsWith("/api/cron/");

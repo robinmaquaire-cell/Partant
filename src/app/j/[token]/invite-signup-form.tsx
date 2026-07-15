@@ -133,7 +133,11 @@ export function InviteSignupForm({
       </button>
       <p className="text-xs mt-3 text-center text-ink-soft">
         Pas de mot de passe : tu recevras un lien magique par e-mail. En
-        continuant, tu acceptes les conditions d&apos;utilisation.
+        continuant, tu acceptes les{" "}
+        <a href="/conditions" className="underline">
+          conditions d&apos;utilisation
+        </a>
+        .
       </p>
     </div>
   );

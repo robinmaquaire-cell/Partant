@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Public_Sans } from "next/font/google";
+import { SwRegister } from "@/components/sw-register";
 import "./globals.css";
 
 const bricolage = Bricolage_Grotesque({
@@ -17,6 +18,12 @@ export const metadata: Metadata = {
   title: "Partant ?",
   description:
     "Organise des sorties entre potes, sans noyer les groupes de discussion.",
+  icons: { apple: "/apple-touch-icon.png" },
+  appleWebApp: { capable: true, title: "Partant ?", statusBarStyle: "default" },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#F1F6F4",
 };
 
 export default function RootLayout({
@@ -29,7 +36,10 @@ export default function RootLayout({
       lang="fr"
       className={`${bricolage.variable} ${publicSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <SwRegister />
+        {children}
+      </body>
     </html>
   );
 }

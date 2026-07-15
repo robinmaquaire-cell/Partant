@@ -1,9 +1,9 @@
 import { LoginForm } from "./login-form";
 
 export default async function ConnexionPage(props: {
-  searchParams: Promise<{ erreur?: string }>;
+  searchParams: Promise<{ erreur?: string; info?: string }>;
 }) {
-  const { erreur } = await props.searchParams;
+  const { erreur, info } = await props.searchParams;
   const configured =
     !!process.env.NEXT_PUBLIC_SUPABASE_URL &&
     !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -16,6 +16,14 @@ export default async function ConnexionPage(props: {
       <p className="mb-8 text-base text-sand">
         Organise des sorties entre potes, sans noyer les groupes de discussion.
       </p>
+      {info === "compte-supprime" && (
+        <div className="rounded-2xl p-4 mb-4 bg-card">
+          <p className="text-sm font-semibold text-ok">
+            ✓ Ton compte et tes données ont été supprimés. À bientôt
+            peut-être !
+          </p>
+        </div>
+      )}
       {configured ? (
         <LoginForm erreur={erreur} />
       ) : (

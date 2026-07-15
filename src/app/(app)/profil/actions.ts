@@ -78,3 +78,38 @@ export async function signOut() {
   await supabase.auth.signOut();
   redirect("/connexion");
 }
+
+// Suppression de compte (RGPD) : immédiate et définitive. Les données
+// liées (profil, réponses, contributions, événements créés) partent en
+// cascade avec le compte.
+export async function deleteAccount(): Promise<
+  { ok: false; error: string } | never
+> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+  if (!admin)
+    return {
+      ok: false,
+      error:
+        "La suppression est indisponible sur cet environnement. Réessaie sur le site en ligne.",
+    };
+
+  // La photo de profil d'abord (elle ne part pas en cascade).
+  await admin.storage.from("avatars").remove([`${user.id}/avatar`]);
+
+  const { error } = await admin.auth.admin.deleteUser(user.id);
+  if (error)
+    return {
+      ok: false,
+      error: "La suppression a échoué. Réessaie dans un instant.",
+    };
+
+  await supabase.auth.signOut();
+  redirect("/connexion?info=compte-supprime");
+}

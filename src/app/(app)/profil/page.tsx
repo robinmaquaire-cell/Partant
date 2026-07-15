@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { TemplatesSection } from "./templates-section";
 import { AvatarUpload } from "./avatar-upload";
+import { DeleteAccount } from "./delete-account";
+import Link from "next/link";
 
 type TemplateRow = {
   id: string;
@@ -63,6 +65,12 @@ export default async function ProfilPage(props: {
           location: t.payload?.location_text ?? "",
         }))}
       />
+      <DeleteAccount />
+      <p className="text-xs text-center mt-6 mb-2 text-ink-soft">
+        <Link href="/conditions" className="underline">
+          Conditions d&apos;utilisation et confidentialité
+        </Link>
+      </p>
     </>
   );
 }
