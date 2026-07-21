@@ -5,10 +5,11 @@ import Link from "next/link";
 import { EventCard, type EventCardData } from "./event-card";
 import { CalendarView } from "./calendar-view";
 
-type StatusFilter = "yes" | "none" | null;
+type StatusFilter = "yes" | "none" | "no" | null;
 
 // Onglet Événements : bascule liste/calendrier + filtres par liste de
-// diffusion et par ma réponse.
+// diffusion et par ma réponse. Par défaut, les événements auxquels on a
+// répondu « Pas dispo » sont masqués (filtre « Pas dispo » pour les revoir).
 export function EventsView({ events }: { events: EventCardData[] }) {
   const [view, setView] = useState<"list" | "cal">("list");
   const [listFilter, setListFilter] = useState<string | null>(null);
@@ -22,10 +23,15 @@ export function EventsView({ events }: { events: EventCardData[] }) {
     a.name.localeCompare(b.name, "fr")
   );
 
+  const refusedCount = events.filter((e) => e.myStatus === "no").length;
+
   const filtered = events.filter((e) => {
     if (listFilter && !e.lists.some((l) => l.id === listFilter)) return false;
     if (statusFilter === "yes" && e.myStatus !== "yes") return false;
     if (statusFilter === "none" && e.myStatus !== null) return false;
+    if (statusFilter === "no" && e.myStatus !== "no") return false;
+    // Sans filtre explicite, on cache ce qu'on a déjà refusé.
+    if (statusFilter === null && e.myStatus === "no") return false;
     return true;
   });
 
@@ -75,7 +81,8 @@ export function EventsView({ events }: { events: EventCardData[] }) {
       </div>
 
       {/* Filtres : n'apparaissent que s'il y a matière à filtrer. */}
-      {events.length > 0 && (listOptions.length > 1 || events.length > 2) && (
+      {events.length > 0 &&
+        (listOptions.length > 1 || events.length > 2 || refusedCount > 0) && (
         <div className="flex gap-2 mb-4 overflow-x-auto pb-1 -mx-5 px-5">
           <button
             type="button"
@@ -125,6 +132,15 @@ export function EventsView({ events }: { events: EventCardData[] }) {
           >
             Sans réponse
           </button>
+          {refusedCount > 0 && (
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === "no" ? null : "no")}
+              className={chip(statusFilter === "no")}
+            >
+              Pas dispo ({refusedCount})
+            </button>
+          )}
         </div>
       )}
 
@@ -136,7 +152,9 @@ export function EventsView({ events }: { events: EventCardData[] }) {
             <div className="text-center py-12 text-ink-soft">
               {events.length === 0
                 ? "Aucun événement à venir. Crée le premier !"
-                : "Rien ne correspond à ces filtres."}
+                : statusFilter === "no"
+                  ? "Aucun événement refusé à venir."
+                  : "Rien ne correspond à ces filtres."}
             </div>
           )}
           {upcoming.map((ev) => (

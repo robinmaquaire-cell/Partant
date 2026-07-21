@@ -16,6 +16,13 @@ export type EquipmentDraft = {
   name: string;
   kind: "indiv" | "collectif";
   qty: number | null;
+  category: string | null;
+};
+
+// Un rôle à occuper : « Responsable transport », 2 personnes.
+export type RoleDraft = {
+  name: string;
+  capacity: number;
 };
 
 export type EventInput = {
@@ -30,6 +37,7 @@ export type EventInput = {
   collaborative: boolean;
   listIds: string[];
   equipment: EquipmentDraft[];
+  roles: RoleDraft[];
 };
 
 async function requireUser() {
@@ -78,6 +86,14 @@ function checkEventInput(input: EventInput): string | null {
     const qty = it.qty ?? 1;
     if (!Number.isInteger(qty) || qty < 1 || qty > 999)
       return "La quantité doit être entre 1 et 999.";
+    if ((it.category ?? "").trim().length > 30)
+      return "Le nom de catégorie est trop long (30 caractères max).";
+  }
+  for (const r of input.roles) {
+    if (!r.name.trim() || r.name.trim().length > 40)
+      return "Chaque rôle doit avoir un nom (40 caractères max).";
+    if (!Number.isInteger(r.capacity) || r.capacity < 1 || r.capacity > 100)
+      return "Le nombre de personnes par rôle doit être entre 1 et 100.";
   }
   return null;
 }
@@ -87,7 +103,12 @@ function equipmentJson(equipment: EquipmentDraft[]) {
     name: it.name.trim(),
     kind: it.kind,
     qty: it.qty ?? 1,
+    category: (it.category ?? "").trim() || null,
   }));
+}
+
+function rolesJson(roles: RoleDraft[]) {
+  return roles.map((r) => ({ name: r.name.trim(), capacity: r.capacity }));
 }
 
 export async function createEvent(
@@ -114,6 +135,7 @@ export async function createEvent(
     p_collaborative: input.collaborative,
     p_list_ids: input.listIds,
     p_equipment: equipmentJson(input.equipment),
+    p_roles: rolesJson(input.roles),
     p_template_name: templateName ? templateName.trim() : null,
   });
 
@@ -133,9 +155,14 @@ export async function createEvent(
 export async function updateEvent(
   eventId: string,
   input: EventInput,
-  equipmentRemoved: string[]
+  equipmentRemoved: string[],
+  rolesRemoved: string[] = []
 ): Promise<{ ok: false; error: string } | never> {
-  if (!UUID_RE.test(eventId) || equipmentRemoved.some((id) => !UUID_RE.test(id)))
+  if (
+    !UUID_RE.test(eventId) ||
+    equipmentRemoved.some((id) => !UUID_RE.test(id)) ||
+    rolesRemoved.some((id) => !UUID_RE.test(id))
+  )
     return { ok: false, error: "Requête invalide." };
   const problem = checkEventInput(input);
   if (problem) return { ok: false, error: problem };
@@ -157,6 +184,8 @@ export async function updateEvent(
     p_list_ids: input.listIds,
     p_equipment_new: equipmentJson(input.equipment),
     p_equipment_removed: equipmentRemoved,
+    p_roles_new: rolesJson(input.roles),
+    p_roles_removed: rolesRemoved,
   });
 
   if (error)
@@ -228,6 +257,86 @@ export async function resignOrganizer(
 
   revalidatePath(`/evenements/${eventId}`);
   revalidatePath("/");
+  return { ok: true };
+}
+
+// ——— Les rôles à occuper (responsable transport, repas…) ———
+
+// Créer un rôle depuis la page de l'événement (réservé aux organisateurs).
+export async function addEventRole(
+  eventId: string,
+  name: string,
+  capacity: number
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId)) return { ok: false, error: "Requête invalide." };
+  const trimmed = name.trim();
+  if (!trimmed || trimmed.length > 40)
+    return { ok: false, error: "Donne un nom au rôle (40 caractères max)." };
+  if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100)
+    return {
+      ok: false,
+      error: "Le nombre de personnes doit être entre 1 et 100.",
+    };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("add_event_role", {
+    p_event: eventId,
+    p_name: trimmed,
+    p_capacity: capacity,
+  });
+  if (error)
+    return { ok: false, error: frenchError(error.message, "L'ajout a échoué.") };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true };
+}
+
+export async function removeEventRole(
+  eventId: string,
+  roleId: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId) || !UUID_RE.test(roleId))
+    return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("remove_event_role", { p_role: roleId });
+  if (error)
+    return {
+      ok: false,
+      error: frenchError(error.message, "La suppression a échoué."),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true };
+}
+
+// Prendre en charge un rôle, ou s'en retirer.
+export async function setRoleTaken(
+  eventId: string,
+  roleId: string,
+  taken: boolean
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId) || !UUID_RE.test(roleId))
+    return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc(taken ? "take_role" : "leave_role", {
+    p_role: roleId,
+  });
+  if (error)
+    return {
+      ok: false,
+      error: frenchError(
+        error.message,
+        "L'enregistrement a échoué. Réessaie dans un instant."
+      ),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
   return { ok: true };
 }
 
@@ -316,7 +425,8 @@ export async function setConfirmation(
 export async function addOwnItem(
   eventId: string,
   name: string,
-  qty: number
+  qty: number,
+  category: string | null = null
 ): Promise<ActionResult> {
   if (!UUID_RE.test(eventId)) return { ok: false, error: "Requête invalide." };
   const trimmed = name.trim();
@@ -324,6 +434,9 @@ export async function addOwnItem(
     return { ok: false, error: "Donne un nom à l'objet (60 caractères max)." };
   if (!Number.isInteger(qty) || qty < 1 || qty > 999)
     return { ok: false, error: "La quantité doit être entre 1 et 999." };
+  const cat = (category ?? "").trim();
+  if (cat.length > 30)
+    return { ok: false, error: "Le nom de catégorie est trop long (30 caractères max)." };
 
   const { supabase, user } = await requireUser();
   if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
@@ -335,6 +448,7 @@ export async function addOwnItem(
       name: trimmed,
       kind: "collectif",
       qty,
+      category: cat || null,
       added_by: user.id,
     })
     .select("id")

@@ -4,11 +4,13 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { parseGps } from "@/lib/parse-gps";
 import { GpsMap } from "@/components/gps-map";
+import { SUGGESTED_CATEGORIES } from "@/lib/equipment-categories";
 import {
   createEvent,
   updateEvent,
   type EquipmentDraft,
   type EventInput,
+  type RoleDraft,
 } from "./actions";
 
 export type TemplatePayload = {
@@ -21,6 +23,7 @@ export type TemplatePayload = {
   max_participants?: number;
   collaborative?: boolean;
   equipment?: EquipmentDraft[];
+  roles?: RoleDraft[];
 };
 
 type ListOption = { id: string; name: string; color: string };
@@ -30,7 +33,9 @@ type ExistingItem = {
   name: string;
   kind: "indiv" | "collectif";
   qty: number | null;
+  category: string | null;
 };
+type ExistingRole = { id: string; name: string; capacity: number };
 
 type EditProps = {
   eventId: string;
@@ -47,6 +52,7 @@ type EditProps = {
     listIds: string[];
   };
   existingEquipment: ExistingItem[];
+  existingRoles: ExistingRole[];
 };
 
 const label = "text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft";
@@ -90,6 +96,28 @@ export function EventForm({
   const [eqKind, setEqKind] = useState<"collectif" | "indiv">("collectif");
   const [eqName, setEqName] = useState("");
   const [eqQty, setEqQty] = useState(1);
+  const [eqCat, setEqCat] = useState("");
+
+  // Rôles : ceux déjà en base (mode édition) + les nouveaux.
+  const [keptRoles, setKeptRoles] = useState<ExistingRole[]>(
+    edit?.existingRoles ?? []
+  );
+  const [removedRoles, setRemovedRoles] = useState<string[]>([]);
+  const [roles, setRoles] = useState<RoleDraft[]>([]);
+  const [roleName, setRoleName] = useState("");
+  const [roleCap, setRoleCap] = useState(1);
+
+  // Les catégories déjà utilisées, proposées en plus des suggestions.
+  const usedCategories = [
+    ...new Set(
+      [...kept, ...equipment]
+        .map((it) => (it.category ?? "").trim())
+        .filter(Boolean)
+    ),
+  ];
+  const categoryOptions = [
+    ...new Set([...usedCategories, ...SUGGESTED_CATEGORIES]),
+  ];
 
   const [saveTpl, setSaveTpl] = useState(false);
   const [tplName, setTplName] = useState("");
@@ -114,6 +142,13 @@ export function EventForm({
         name: e.name,
         kind: e.kind,
         qty: e.qty ?? 1,
+        category: e.category ?? null,
+      }))
+    );
+    setRoles(
+      (p.roles ?? []).map((r) => ({
+        name: r.name,
+        capacity: r.capacity ?? 1,
       }))
     );
     setUsedTpl(t.id);
@@ -132,10 +167,22 @@ export function EventForm({
         name: eqName.trim(),
         kind: eqKind,
         qty: Math.max(1, eqQty || 1),
+        category: eqCat.trim() || null,
       },
     ]);
     setEqName("");
     setEqQty(1);
+    // La catégorie reste en place : on saisit souvent plusieurs objets de suite.
+  };
+
+  const addRole = () => {
+    if (!roleName.trim()) return;
+    setRoles([
+      ...roles,
+      { name: roleName.trim(), capacity: Math.max(1, roleCap || 1) },
+    ]);
+    setRoleName("");
+    setRoleCap(1);
   };
 
   const submit = () =>
@@ -153,9 +200,10 @@ export function EventForm({
         collaborative,
         listIds,
         equipment,
+        roles,
       };
       const result = edit
-        ? await updateEvent(edit.eventId, payload, removed)
+        ? await updateEvent(edit.eventId, payload, removed, removedRoles)
         : await createEvent(
             payload,
             saveTpl ? tplName.trim() || title.trim() : null
@@ -344,6 +392,11 @@ export function EventForm({
                   ? `· ${it.qty ?? 1} par personne`
                   : `×${it.qty ?? 1}`}
               </span>
+              {it.category && (
+                <span className="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full bg-sand text-pine">
+                  {it.category}
+                </span>
+              )}
             </span>
             <button
               type="button"
@@ -370,6 +423,11 @@ export function EventForm({
                   ? `· ${it.qty ?? 1} par personne`
                   : `×${it.qty ?? 1}`}
               </span>
+              {it.category && (
+                <span className="ml-1.5 text-xs font-bold px-1.5 py-0.5 rounded-full bg-sand text-pine">
+                  {it.category}
+                </span>
+              )}
             </span>
             <button
               type="button"
@@ -402,6 +460,19 @@ export function EventForm({
             </button>
           ))}
         </div>
+        <input
+          className={`${input} mb-2`}
+          value={eqCat}
+          onChange={(e) => setEqCat(e.target.value)}
+          list="categories-materiel"
+          placeholder="Catégorie (facultatif) — ex. Sécurité"
+          maxLength={30}
+        />
+        <datalist id="categories-materiel">
+          {categoryOptions.map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
         <div className="flex gap-2">
           <input
             className={`${input} flex-1 min-w-0`}
@@ -425,6 +496,85 @@ export function EventForm({
           <button
             type="button"
             onClick={addEquipment}
+            className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
+      <div className="mb-3">
+        <div className={label}>Rôles à occuper</div>
+        <p className="text-xs mb-2 text-ink-soft">
+          Les participants pourront se proposer pour ces rôles (responsable
+          transport, responsable repas…). Tu restes organisateur·rice quoi
+          qu&apos;il arrive.
+        </p>
+        {keptRoles.map((r) => (
+          <div
+            key={r.id}
+            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+          >
+            <span>
+              {r.name}{" "}
+              <span className="text-ink-soft">
+                · {r.capacity} personne{r.capacity > 1 ? "s" : ""}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="text-refuse font-bold px-2"
+              onClick={() => {
+                setKeptRoles(keptRoles.filter((k) => k.id !== r.id));
+                setRemovedRoles([...removedRoles, r.id]);
+              }}
+              aria-label={`Retirer ${r.name}`}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        {roles.map((r, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+          >
+            <span>
+              {r.name}{" "}
+              <span className="text-ink-soft">
+                · {r.capacity} personne{r.capacity > 1 ? "s" : ""}
+              </span>
+            </span>
+            <button
+              type="button"
+              className="text-refuse font-bold px-2"
+              onClick={() => setRoles(roles.filter((_, j) => j !== i))}
+              aria-label={`Retirer ${r.name}`}
+            >
+              ✕
+            </button>
+          </div>
+        ))}
+        <div className="flex gap-2">
+          <input
+            className={`${input} flex-1 min-w-0`}
+            value={roleName}
+            onChange={(e) => setRoleName(e.target.value)}
+            placeholder="ex. Responsable transport"
+            maxLength={40}
+          />
+          <input
+            type="number"
+            min={1}
+            max={100}
+            className="w-16 shrink-0 text-center bg-card border-[1.5px] border-line rounded-xl px-2 py-2.5 text-[15px] text-ink outline-none focus:border-river"
+            value={roleCap}
+            onChange={(e) => setRoleCap(Number(e.target.value))}
+            aria-label="Nombre de personnes pour ce rôle"
+          />
+          <button
+            type="button"
+            onClick={addRole}
             className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
           >
             +

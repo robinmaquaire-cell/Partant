@@ -73,6 +73,47 @@ export async function deleteTemplate(
   return { ok: true };
 }
 
+// ——— Calendrier partagé ———
+
+// Choisir si une liste alimente mon calendrier partagé.
+export async function setListInCalendar(
+  listId: string,
+  on: boolean
+): Promise<UpdateProfileResult> {
+  if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("set_list_in_calendar", {
+    p_list: listId,
+    p_on: on,
+  });
+  if (error)
+    return { ok: false, error: "La modification a échoué. Réessaie dans un instant." };
+
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
+// Changer de lien de calendrier : l'ancien cesse aussitôt de fonctionner.
+export async function resetCalendarToken(): Promise<UpdateProfileResult> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase.rpc("reset_calendar_token");
+  if (error)
+    return { ok: false, error: "La création du lien a échoué. Réessaie dans un instant." };
+
+  revalidatePath("/profil");
+  return { ok: true };
+}
+
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();

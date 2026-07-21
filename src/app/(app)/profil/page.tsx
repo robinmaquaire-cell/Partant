@@ -1,8 +1,10 @@
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { TemplatesSection } from "./templates-section";
 import { AvatarUpload } from "./avatar-upload";
+import { CalendarSection } from "./calendar-section";
 import { DeleteAccount } from "./delete-account";
 import Link from "next/link";
 
@@ -10,6 +12,11 @@ type TemplateRow = {
   id: string;
   name: string;
   payload: { event_time?: string; location_text?: string } | null;
+};
+
+type MembershipRow = {
+  in_calendar: boolean;
+  lists: { id: string; name: string; color: string } | null;
 };
 
 export default async function ProfilPage(props: {
@@ -22,7 +29,12 @@ export default async function ProfilPage(props: {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const [{ data: profile }, { data: templates }] = await Promise.all([
+  const [
+    { data: profile },
+    { data: templates },
+    { data: calendarToken },
+    { data: memberships },
+  ] = await Promise.all([
     supabase
       .from("profiles")
       .select("pseudo, contact_mode, contact, avatar_url")
@@ -32,7 +44,33 @@ export default async function ProfilPage(props: {
       .from("templates")
       .select("id, name, payload")
       .order("created_at", { ascending: true }),
+    // Crée le lien de calendrier à la première visite.
+    supabase.rpc("get_calendar_token"),
+    supabase
+      .from("list_members")
+      .select("in_calendar, lists(id, name, color)")
+      .eq("user_id", user.id),
   ]);
+
+  // L'adresse publique du site, telle que le navigateur l'a demandée.
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const proto =
+    h.get("x-forwarded-proto") ??
+    (host.startsWith("localhost") || host.startsWith("127.") ? "http" : "https");
+  const calendarUrl = calendarToken
+    ? `${proto}://${host}/api/calendrier/${calendarToken}.ics`
+    : "";
+
+  const calendarLists = ((memberships ?? []) as unknown as MembershipRow[])
+    .filter((m) => m.lists !== null)
+    .map((m) => ({
+      id: m.lists!.id,
+      name: m.lists!.name,
+      color: m.lists!.color,
+      inCalendar: m.in_calendar,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name, "fr"));
 
   return (
     <>
@@ -57,6 +95,9 @@ export default async function ProfilPage(props: {
           contact: profile?.contact ?? user.email ?? "",
         }}
       />
+      {calendarUrl && (
+        <CalendarSection url={calendarUrl} lists={calendarLists} />
+      )}
       <TemplatesSection
         templates={((templates ?? []) as TemplateRow[]).map((t) => ({
           id: t.id,

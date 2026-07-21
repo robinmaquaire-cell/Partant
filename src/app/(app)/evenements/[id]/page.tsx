@@ -7,6 +7,7 @@ import { RsvpBar } from "./rsvp-bar";
 import { EquipmentSection } from "./equipment-section";
 import { OwnerActions } from "./owner-actions";
 import { OrganizersSection } from "./organizers-section";
+import { RolesSection } from "./roles-section";
 
 type EventRow = {
   id: string;
@@ -28,9 +29,17 @@ type EventRow = {
     name: string;
     kind: "indiv" | "collectif";
     qty: number | null;
+    category: string | null;
     added_by: string | null;
     equipment_contributions: { user_id: string; qty: number }[];
     equipment_confirmations: { user_id: string }[];
+  }[];
+  event_roles: {
+    id: string;
+    name: string;
+    capacity: number;
+    created_at: string;
+    event_role_takers: { user_id: string }[];
   }[];
 };
 
@@ -52,9 +61,10 @@ export default async function EvenementDetailPage(props: {
        event_lists(lists(id, name, color)),
        event_organizers(user_id),
        rsvps(user_id, status),
-       equipment_items(id, name, kind, qty, added_by,
+       equipment_items(id, name, kind, qty, category, added_by,
          equipment_contributions(user_id, qty),
-         equipment_confirmations(user_id))`
+         equipment_confirmations(user_id)),
+       event_roles(id, name, capacity, created_at, event_role_takers(user_id))`
     )
     .eq("id", id)
     .maybeSingle();
@@ -70,6 +80,9 @@ export default async function EvenementDetailPage(props: {
     it.equipment_contributions.forEach((c) => userIds.add(c.user_id));
     it.equipment_confirmations.forEach((c) => userIds.add(c.user_id));
   });
+  (ev.event_roles ?? []).forEach((r) =>
+    r.event_role_takers.forEach((t) => userIds.add(t.user_id))
+  );
   const { data: profiles } = await supabase
     .from("profiles")
     .select("id, pseudo, avatar_url")
@@ -106,12 +119,24 @@ export default async function EvenementDetailPage(props: {
     { weekday: "long", day: "numeric", month: "long" }
   );
 
+  // Les rôles, dans l'ordre où ils ont été créés.
+  const roles = [...(ev.event_roles ?? [])]
+    .sort((a, b) => a.created_at.localeCompare(b.created_at))
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      capacity: r.capacity,
+      takers: r.event_role_takers.map((t) => personOf(t.user_id)),
+      mine: r.event_role_takers.some((t) => t.user_id === user.id),
+    }));
+
   const indivItems = ev.equipment_items
     .filter((it) => it.kind === "indiv")
     .map((it) => ({
       id: it.id,
       name: it.name,
       qty: it.qty ?? 1,
+      category: it.category,
       iHave: it.equipment_confirmations.some((c) => c.user_id === user.id),
       confirmedNames: it.equipment_confirmations.map((c) => nameOf(c.user_id)),
     }));
@@ -122,6 +147,7 @@ export default async function EvenementDetailPage(props: {
       id: it.id,
       name: it.name,
       qty: it.qty ?? 1,
+      category: it.category,
       isMine: it.added_by === user.id,
       addedByName: it.added_by ? nameOf(it.added_by) : null,
       myQty:
@@ -188,6 +214,13 @@ export default async function EvenementDetailPage(props: {
         isOrganizer={isOrganizer}
         organizers={ev.event_organizers.map((o) => personOf(o.user_id))}
         candidates={partants.map((r) => personOf(r.user_id))}
+      />
+
+      <RolesSection
+        eventId={ev.id}
+        isOrganizer={isOrganizer}
+        canTake={myStatus === "yes" || isOrganizer}
+        roles={roles}
       />
 
       <h3 className="font-extrabold mb-2 font-display">

@@ -7,8 +7,11 @@ type EquipmentRow = {
   name: string;
   kind: "indiv" | "collectif";
   qty: number | null;
+  category: string | null;
   added_by: string | null;
 };
+
+type RoleRow = { id: string; name: string; capacity: number };
 
 export default async function ModifierEvenementPage(props: {
   params: Promise<{ id: string }>;
@@ -23,7 +26,7 @@ export default async function ModifierEvenementPage(props: {
   const { data: ev } = await supabase
     .from("events")
     .select(
-      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, added_by)"
+      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, category, added_by), event_roles(id, name, capacity)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -71,7 +74,13 @@ export default async function ModifierEvenementPage(props: {
             name: it.name,
             kind: it.kind,
             qty: it.qty,
+            category: it.category,
           })),
+        existingRoles: ((ev.event_roles ?? []) as RoleRow[]).map((r) => ({
+          id: r.id,
+          name: r.name,
+          capacity: r.capacity,
+        })),
       }}
     />
   );

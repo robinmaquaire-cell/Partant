@@ -46,6 +46,9 @@ export async function proxy(request: NextRequest) {
     path.startsWith("/conditions") ||
     path === "/sw.js" ||
     path === "/manifest.webmanifest" ||
+    // Le flux d'agenda est appelé par Google/Apple, sans session :
+    // c'est le jeton secret dans l'URL qui identifie la personne.
+    path.startsWith("/api/calendrier/") ||
     // La tâche planifiée Vercel n'a pas de session : elle est protégée
     // par son propre secret (CRON_SECRET) dans la route.
     path.startsWith("/api/cron/");
