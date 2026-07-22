@@ -50,9 +50,14 @@ async function requireUser() {
 }
 
 // Les fonctions SQL renvoient déjà des messages d'erreur en français
-// (elles se terminent par un point) ; sinon on affiche un message générique.
+// (elles se terminent par un point) ; sinon on affiche un message générique,
+// suivi du message technique — précieux quand quelqu'un signale un bug.
 function frenchError(message: string | undefined, fallback: string): string {
   if (message && message.endsWith(".") && message.includes(" ")) return message;
+  if (message) {
+    console.error("[partant] erreur base de données :", message);
+    return `${fallback}\n(détail technique : ${message})`;
+  }
   return fallback;
 }
 
@@ -145,7 +150,10 @@ export async function createEvent(
   if (error || !data)
     return {
       ok: false,
-      error: frenchError(error?.message, "La création a échoué. Réessaie dans un instant."),
+      error: frenchError(
+        error?.message ?? (data ? undefined : "aucun identifiant renvoyé"),
+        "La création a échoué. Réessaie dans un instant."
+      ),
     };
 
   // Prévenir les membres par e-mail (ne bloque jamais la création).

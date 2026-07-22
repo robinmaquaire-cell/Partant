@@ -702,7 +702,11 @@ export function EventForm({
         )}
       </div>
 
-      {err && <p className="text-sm font-semibold mb-2 text-refuse">{err}</p>}
+      {err && (
+        <p className="text-sm font-semibold mb-2 text-refuse whitespace-pre-line">
+          {err}
+        </p>
+      )}
 
       <div className="flex gap-3 mt-4">
         <button
