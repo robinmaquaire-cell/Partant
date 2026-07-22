@@ -9,6 +9,7 @@ import { OwnerActions } from "./owner-actions";
 import { OrganizersSection } from "./organizers-section";
 import { RolesSection } from "./roles-section";
 import { ShareSection } from "./share-section";
+import { ChatSection, type ChatMessage } from "./chat-section";
 
 type EventRow = {
   id: string;
@@ -73,8 +74,23 @@ export default async function EvenementDetailPage(props: {
   if (!data) notFound();
   const ev = data as unknown as EventRow;
 
+  // La discussion de l'événement, du plus ancien au plus récent.
+  const { data: messageRows } = await supabase
+    .from("event_messages")
+    .select("id, user_id, body, created_at")
+    .eq("event_id", id)
+    .order("created_at", { ascending: true })
+    .limit(300);
+  const messages = (messageRows ?? []) as {
+    id: string;
+    user_id: string;
+    body: string;
+    created_at: string;
+  }[];
+
   // Tous les pseudos et photos utiles en une seule requête.
   const userIds = new Set<string>([ev.created_by]);
+  messages.forEach((m) => userIds.add(m.user_id));
   ev.rsvps.forEach((r) => userIds.add(r.user_id));
   ev.event_organizers.forEach((o) => userIds.add(o.user_id));
   ev.equipment_items.forEach((it) => {
@@ -153,6 +169,19 @@ export default async function EvenementDetailPage(props: {
       takers: r.event_role_takers.map((t) => personOf(t.user_id)),
       mine: r.event_role_takers.some((t) => t.user_id === user.id),
     }));
+
+  const chatMessages: ChatMessage[] = messages.map((m) => {
+    const p = personOf(m.user_id);
+    return {
+      id: m.id,
+      body: m.body,
+      createdAt: m.created_at,
+      pseudo: p.pseudo,
+      avatarUrl: p.avatarUrl,
+      isMine: m.user_id === user.id,
+      canDelete: m.user_id === user.id || isOrganizer,
+    };
+  });
 
   const indivItems = ev.equipment_items
     .filter((it) => it.kind === "indiv")
@@ -300,6 +329,8 @@ export default async function EvenementDetailPage(props: {
         indivItems={indivItems}
         collItems={collItems}
       />
+
+      <ChatSection eventId={ev.id} messages={chatMessages} />
 
       <RsvpBar
         eventId={ev.id}

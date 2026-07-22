@@ -293,6 +293,55 @@ export async function regenerateShareLink(
   return { ok: true, token: data as string };
 }
 
+// ——— La discussion de l'événement ———
+
+export async function sendMessage(
+  eventId: string,
+  body: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId)) return { ok: false, error: "Requête invalide." };
+  const text = body.trim();
+  if (!text) return { ok: false, error: "Écris ton message avant d'envoyer." };
+  if (text.length > 2000)
+    return { ok: false, error: "Ce message est trop long (2000 caractères max)." };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase
+    .from("event_messages")
+    .insert({ event_id: eventId, user_id: user.id, body: text });
+  if (error)
+    return {
+      ok: false,
+      error: frenchError(error.message, "L'envoi a échoué. Réessaie dans un instant."),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true };
+}
+
+// Retirer un message : le sien, ou n'importe lequel pour un organisateur.
+export async function deleteMessage(
+  eventId: string,
+  messageId: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(eventId) || !UUID_RE.test(messageId))
+    return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { error } = await supabase
+    .from("event_messages")
+    .delete()
+    .eq("id", messageId);
+  if (error)
+    return { ok: false, error: "La suppression a échoué. Réessaie dans un instant." };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true };
+}
+
 // ——— Les rôles à occuper (responsable transport, repas…) ———
 
 // Créer un rôle depuis la page de l'événement (réservé aux organisateurs).
