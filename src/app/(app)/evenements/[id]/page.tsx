@@ -8,6 +8,7 @@ import { EquipmentSection } from "./equipment-section";
 import { OwnerActions } from "./owner-actions";
 import { OrganizersSection } from "./organizers-section";
 import { RolesSection } from "./roles-section";
+import { ShareSection } from "./share-section";
 
 type EventRow = {
   id: string;
@@ -114,6 +115,28 @@ export default async function EvenementDetailPage(props: {
   const myStatus = ev.rsvps.find((r) => r.user_id === user.id)?.status ?? null;
   const isOrganizer = organizerIds.has(user.id);
 
+  // Le lien de partage (créé à la première ouverture par un organisateur).
+  let shareToken: string | null = null;
+  if (isOrganizer) {
+    const { data: token } = await supabase.rpc("get_event_share_token", {
+      p_event: ev.id,
+    });
+    shareToken = (token as string) ?? null;
+  }
+
+  // Les personnes arrivées par le lien de partage, membres d'aucune des
+  // listes de l'événement. (Sans liste, tout le monde est dans ce cas :
+  // on l'indique une seule fois en haut plutôt que sur chaque personne.)
+  const outsiders = new Set<string>();
+  if (lists.length > 0) {
+    const { data: rows } = await supabase.rpc("event_outsiders", {
+      p_event: ev.id,
+    });
+    ((rows ?? []) as { user_id: string }[]).forEach((r) =>
+      outsiders.add(r.user_id)
+    );
+  }
+
   const longDate = new Date(ev.event_date + "T00:00").toLocaleDateString(
     "fr-FR",
     { weekday: "long", day: "numeric", month: "long" }
@@ -198,10 +221,19 @@ export default async function EvenementDetailPage(props: {
               {l.name}
             </span>
           ))}
+          {lists.length === 0 && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20">
+              🔗 Sur invitation — aucune liste de diffusion
+            </span>
+          )}
         </div>
       </div>
 
       {isOrganizer && <OwnerActions eventId={ev.id} />}
+
+      {isOrganizer && shareToken && (
+        <ShareSection eventId={ev.id} token={shareToken} title={ev.title} />
+      )}
 
       {ev.description && (
         <p className="mb-5 text-[15px] leading-relaxed whitespace-pre-line">
@@ -236,6 +268,14 @@ export default async function EvenementDetailPage(props: {
             >
               <Avatar pseudo={p.pseudo} url={p.avatarUrl} size={24} />
               {r.user_id === user.id ? "Toi" : p.pseudo}
+              {outsiders.has(r.user_id) && (
+                <span
+                  className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sand text-pine"
+                  title="Cette personne n'est dans aucune liste de diffusion de l'événement"
+                >
+                  hors liste
+                </span>
+              )}
             </span>
           );
         })}

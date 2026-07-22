@@ -5,12 +5,15 @@ import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export function InviteSignupForm({
-  token,
-  listName,
+// Formulaire d'arrivée par un lien : création de compte (ou connexion)
+// par lien magique, puis retour sur la page d'invitation.
+// Sert aux invitations de liste (/j/…) comme aux partages d'événement (/e/…).
+export function JoinSignupForm({
+  label,
+  next,
 }: {
-  token: string;
-  listName: string;
+  label: string; // ce qu'on rejoint : nom de la liste ou de l'événement
+  next: string; // page où revenir après le clic sur le lien magique
 }) {
   const [mode, setMode] = useState<"nouveau" | "connexion">("nouveau");
   const [pseudo, setPseudo] = useState("");
@@ -35,7 +38,7 @@ export function InviteSignupForm({
     const { error } = await supabase.auth.signInWithOtp({
       email: value,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=/j/${token}`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${next}`,
         // Connexion à un compte existant : on ne crée rien.
         ...(mode === "nouveau"
           ? { data: { pseudo: pseudo.trim() } }
@@ -60,7 +63,7 @@ export function InviteSignupForm({
         <div className="font-bold mb-1">📬 Plus qu&apos;une étape !</div>
         <p className="text-sm text-ink-soft">
           Ouvre l&apos;e-mail reçu sur <strong>{email.trim()}</strong> et
-          clique sur le lien : tu pourras rejoindre « {listName} ». Ouvre-le
+          clique sur le lien : tu pourras rejoindre « {label} ». Ouvre-le
           sur cet appareil, avec ce navigateur.
         </p>
       </div>

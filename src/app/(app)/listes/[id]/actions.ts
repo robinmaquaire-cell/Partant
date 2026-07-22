@@ -88,6 +88,34 @@ export async function addMemberByEmail(
   return { ok: true };
 }
 
+// Renommer une liste (réservé à ses admins par la sécurité Supabase).
+export async function renameList(
+  listId: string,
+  name: string
+): Promise<ActionResult> {
+  if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
+  const trimmed = name.trim();
+  if (!trimmed) return { ok: false, error: "Donne un nom à la liste." };
+  if (trimmed.length > 60)
+    return { ok: false, error: "Ce nom est trop long (60 caractères max)." };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { data, error } = await supabase
+    .from("lists")
+    .update({ name: trimmed })
+    .eq("id", listId)
+    .select("id");
+  if (error) return { ok: false, error: "Le renommage a échoué." };
+  if (!data || data.length === 0)
+    return { ok: false, error: "Seuls les admins de la liste peuvent la renommer." };
+
+  revalidatePath(`/listes/${listId}`);
+  revalidatePath("/listes");
+  return { ok: true };
+}
+
 export async function regenerateInvite(listId: string): Promise<ActionResult> {
   if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
   const { supabase, user } = await requireUser();

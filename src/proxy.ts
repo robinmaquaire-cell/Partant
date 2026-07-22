@@ -38,11 +38,13 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  // /j/… = pages d'invitation, accessibles sans compte (c'est le parcours d'inscription).
+  // /j/… (invitation à une liste) et /e/… (partage d'un événement) :
+  // accessibles sans compte, c'est le parcours d'inscription.
   const isPublic =
     path.startsWith("/connexion") ||
     path.startsWith("/auth") ||
     path.startsWith("/j/") ||
+    path.startsWith("/e/") ||
     path.startsWith("/conditions") ||
     path === "/sw.js" ||
     path === "/manifest.webmanifest" ||

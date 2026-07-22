@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InviteLinkButton } from "./invite-link-button";
 import { MembersSection } from "./members-section";
 import { LeaveListButton } from "./leave-list-button";
+import { ListTitle } from "./rename-list";
 
 type MemberRow = {
   user_id: string;
@@ -77,7 +78,7 @@ export default async function ListeDetailPage(props: {
         className="rounded-2xl p-5 mb-4 text-white"
         style={{ background: list.color }}
       >
-        <h1 className="text-2xl font-extrabold font-display">{list.name}</h1>
+        <ListTitle listId={list.id} name={list.name} isAdmin={!!isAdmin} />
         <div className="text-sm mt-1 opacity-90">
           {membersHidden
             ? "Membres masqués"

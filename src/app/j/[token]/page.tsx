@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { JoinButton } from "./join-button";
-import { InviteSignupForm } from "./invite-signup-form";
+import { JoinSignupForm } from "@/components/join-signup-form";
 
 type InviteInfo = {
   list_id: string;
@@ -76,7 +76,7 @@ export default async function InvitePage(props: {
               <JoinButton token={token} listName={invite.list_name} />
             )
           ) : (
-            <InviteSignupForm token={token} listName={invite.list_name} />
+            <JoinSignupForm label={invite.list_name} next={`/j/${token}`} />
           )}
         </>
       )}

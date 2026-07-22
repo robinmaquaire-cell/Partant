@@ -41,6 +41,11 @@ export function EventCard({ ev }: { ev: EventCardData }) {
               {l.name}
             </span>
           ))}
+          {ev.lists.length === 0 && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine">
+              🔗 Sur invitation
+            </span>
+          )}
         </div>
         <div className="font-bold text-base leading-tight">{ev.title}</div>
         <div className="text-sm mt-0.5 text-ink-soft">

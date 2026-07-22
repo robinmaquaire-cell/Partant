@@ -75,8 +75,7 @@ function checkEventInput(input: EventInput): string | null {
     return "Point GPS invalide.";
   if (!Number.isInteger(input.max) || input.max < 1 || input.max > 1000)
     return "Le nombre max de participants doit être entre 1 et 1000.";
-  if (input.listIds.length === 0)
-    return "Choisis au moins une liste de diffusion.";
+  // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
   for (const it of input.equipment) {
     if (!it.name.trim() || it.name.trim().length > 60)
@@ -258,6 +257,27 @@ export async function resignOrganizer(
   revalidatePath(`/evenements/${eventId}`);
   revalidatePath("/");
   return { ok: true };
+}
+
+// Remplacer le lien de partage d'un événement (l'ancien cesse de marcher).
+export async function regenerateShareLink(
+  eventId: string
+): Promise<{ ok: true; token: string } | { ok: false; error: string }> {
+  if (!UUID_RE.test(eventId)) return { ok: false, error: "Requête invalide." };
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { data, error } = await supabase.rpc("regenerate_event_share_token", {
+    p_event: eventId,
+  });
+  if (error || !data)
+    return {
+      ok: false,
+      error: frenchError(error?.message, "La création du lien a échoué."),
+    };
+
+  revalidatePath(`/evenements/${eventId}`);
+  return { ok: true, token: data as string };
 }
 
 // ——— Les rôles à occuper (responsable transport, repas…) ———

@@ -619,11 +619,11 @@ export function EventForm({
       )}
 
       <div className="mb-3">
-        <div className={label}>Partager avec les listes</div>
+        <div className={label}>Partager avec les listes (facultatif)</div>
         {lists.length === 0 && (
           <p className="text-sm text-ink-soft">
-            Tu n&apos;as pas encore de liste de diffusion — crée-en une dans
-            l&apos;onglet Listes avant de créer un événement.
+            Tu n&apos;as pas encore de liste de diffusion — ce n&apos;est pas
+            grave : tu pourras inviter qui tu veux avec le lien de partage.
           </p>
         )}
         {lists.map((l) => {
@@ -647,6 +647,13 @@ export function EventForm({
             </button>
           );
         })}
+        {listIds.length === 0 && (
+          <p className="text-xs mt-1 text-ink-soft">
+            🔗 Sans liste, l&apos;événement ne sera visible que par les
+            personnes à qui tu enverras le lien de partage (bouton « Partager »
+            une fois l&apos;événement créé).
+          </p>
+        )}
       </div>
 
       {err && <p className="text-sm font-semibold mb-2 text-refuse">{err}</p>}

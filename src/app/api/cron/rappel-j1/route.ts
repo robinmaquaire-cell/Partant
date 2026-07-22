@@ -17,6 +17,7 @@ type EventRow = {
   event_time: string;
   location_text: string;
   event_lists: { list_id: string }[];
+  event_guests: { user_id: string }[];
   rsvps: { user_id: string; status: "yes" | "no" }[];
 };
 
@@ -47,7 +48,7 @@ export async function GET(request: Request) {
   const { data: eventData, error } = await admin
     .from("events")
     .select(
-      "id, title, event_time, location_text, event_lists(list_id), rsvps(user_id, status)"
+      "id, title, event_time, location_text, event_lists(list_id), event_guests(user_id), rsvps(user_id, status)"
     )
     .eq("event_date", tomorrow);
   if (error)
@@ -66,6 +67,23 @@ export async function GET(request: Request) {
     .select("list_id, user_id, profiles(contact_mode, contact)")
     .in("list_id", allListIds);
   const members = (memberData ?? []) as unknown as MemberRow[];
+
+  // Les personnes arrivées par un lien de partage sont prévenues aussi.
+  const guestIds = [
+    ...new Set(events.flatMap((e) => e.event_guests.map((g) => g.user_id))),
+  ];
+  const { data: guestProfiles } = guestIds.length
+    ? await admin
+        .from("profiles")
+        .select("id, contact_mode, contact")
+        .in("id", guestIds)
+    : { data: [] };
+  const contactOf = new Map(
+    (guestProfiles ?? []).map((p) => [
+      p.id,
+      { contact_mode: p.contact_mode as string, contact: p.contact as string | null },
+    ])
+  );
 
   const messages: EmailMessage[] = [];
   for (const ev of events) {
@@ -93,6 +111,24 @@ export async function GET(request: Request) {
           time: ev.event_time.slice(0, 5),
           location: ev.location_text,
           hasAnswered: yesSet.has(m.user_id),
+        })
+      );
+    }
+    for (const g of ev.event_guests) {
+      if (seen.has(g.user_id) || noSet.has(g.user_id)) continue;
+      seen.add(g.user_id);
+      const p = contactOf.get(g.user_id);
+      if (!p || p.contact_mode !== "email") continue;
+      const email = (p.contact ?? "").trim();
+      if (!EMAIL_RE.test(email)) continue;
+      messages.push(
+        reminderEmail({
+          to: email,
+          eventId: ev.id,
+          title: ev.title,
+          time: ev.event_time.slice(0, 5),
+          location: ev.location_text,
+          hasAnswered: yesSet.has(g.user_id),
         })
       );
     }

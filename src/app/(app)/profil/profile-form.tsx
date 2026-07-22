@@ -78,9 +78,10 @@ export function ProfileForm({
           ))}
         </div>
         {mode !== "email" && (
-          <p className="text-xs mt-1 text-ink-soft">
-            Les notifications WhatsApp/SMS arriveront dans une prochaine
-            version — en attendant, tu seras prévenu·e par e-mail.
+          <p className="text-xs mt-1 font-semibold text-refuse">
+            ⚠️ Les notifications WhatsApp et SMS ne sont pas encore en service :
+            si tu choisis ce mode, tu ne recevras aucune notification. Choisis
+            « E-mail » pour être prévenu·e.
           </p>
         )}
       </label>
@@ -116,13 +117,6 @@ export function ProfileForm({
       >
         {saving ? "Enregistrement…" : "Enregistrer"}
       </button>
-
-      <h3 className="font-extrabold mt-8 mb-2 font-display">
-        Mes templates d&apos;événements
-      </h3>
-      <p className="text-sm mb-2 text-ink-soft">
-        🚧 Les templates arrivent au jalon 3 du chantier.
-      </p>
 
       <div className="mt-8">
         <button
