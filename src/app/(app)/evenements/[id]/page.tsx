@@ -9,6 +9,7 @@ import { OwnerActions } from "./owner-actions";
 import { OrganizersSection } from "./organizers-section";
 import { RolesSection } from "./roles-section";
 import { ShareSection } from "./share-section";
+import { ShareButton } from "./share-button";
 import { ChatSection, type ChatMessage } from "./chat-section";
 
 type EventRow = {
@@ -132,13 +133,24 @@ export default async function EvenementDetailPage(props: {
   const myStatus = ev.rsvps.find((r) => r.user_id === user.id)?.status ?? null;
   const isOrganizer = organizerIds.has(user.id);
 
-  // Le lien de partage (créé à la première ouverture par un organisateur).
+  // Le lien de partage : les organisateurs le créent à la première ouverture,
+  // les autres partagent celui qui existe déjà.
   let shareToken: string | null = null;
   if (isOrganizer) {
     const { data: token } = await supabase.rpc("get_event_share_token", {
       p_event: ev.id,
     });
     shareToken = (token as string) ?? null;
+  } else {
+    const { data: invite } = await supabase
+      .from("event_invites")
+      .select("token")
+      .eq("event_id", ev.id)
+      .eq("revoked", false)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    shareToken = invite?.token ?? null;
   }
 
   // Les personnes arrivées par le lien de partage, membres d'aucune des
@@ -215,9 +227,16 @@ export default async function EvenementDetailPage(props: {
 
   return (
     <div className="pb-40">
-      <Link href="/" className="inline-block text-sm font-bold mb-3 text-ink-soft">
-        ← Retour
-      </Link>
+      <div className="flex items-center justify-between mb-3">
+        <Link href="/" className="text-sm font-bold text-ink-soft">
+          ← Retour
+        </Link>
+        <ShareButton
+          path={shareToken ? `/e/${shareToken}` : "/"}
+          title={ev.title}
+          withInvite={shareToken !== null}
+        />
+      </div>
 
       <div className="rounded-2xl p-5 mb-4 text-white" style={{ background: color }}>
         <h1 className="text-2xl font-extrabold leading-tight font-display">
@@ -266,9 +285,7 @@ export default async function EvenementDetailPage(props: {
 
       {isOrganizer && <OwnerActions eventId={ev.id} />}
 
-      {isOrganizer && shareToken && (
-        <ShareSection eventId={ev.id} token={shareToken} title={ev.title} />
-      )}
+      {isOrganizer && <ShareSection eventId={ev.id} />}
 
       {ev.description && (
         <p className="mb-5 text-[15px] leading-relaxed whitespace-pre-line">
