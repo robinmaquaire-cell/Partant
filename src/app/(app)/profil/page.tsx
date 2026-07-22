@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ProfileForm } from "./profile-form";
 import { TemplatesSection } from "./templates-section";
 import { AvatarUpload } from "./avatar-upload";
+import { PasswordSection } from "./password-section";
 import { DeleteAccount } from "./delete-account";
 import Link from "next/link";
 
@@ -13,9 +14,9 @@ type TemplateRow = {
 };
 
 export default async function ProfilPage(props: {
-  searchParams: Promise<{ bienvenue?: string }>;
+  searchParams: Promise<{ bienvenue?: string; mdp?: string }>;
 }) {
-  const { bienvenue } = await props.searchParams;
+  const { bienvenue, mdp } = await props.searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -57,6 +58,7 @@ export default async function ProfilPage(props: {
           emailNotifications: profile?.email_notifications ?? true,
         }}
       />
+      <PasswordSection highlight={mdp === "1"} />
       <TemplatesSection
         templates={((templates ?? []) as TemplateRow[]).map((t) => ({
           id: t.id,

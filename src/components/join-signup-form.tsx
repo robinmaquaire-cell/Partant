@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -15,12 +16,40 @@ export function JoinSignupForm({
   label: string; // ce qu'on rejoint : nom de la liste ou de l'événement
   next: string; // page où revenir après le clic sur le lien magique
 }) {
+  const router = useRouter();
   const [mode, setMode] = useState<"nouveau" | "connexion">("nouveau");
   const [pseudo, setPseudo] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [err, setErr] = useState("");
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+
+  // Retour d'une personne qui a déjà choisi un mot de passe.
+  const signInWithPassword = async () => {
+    const value = email.trim().toLowerCase();
+    if (!EMAIL_RE.test(value)) {
+      setErr("Cette adresse e-mail n'est pas valide.");
+      return;
+    }
+    setErr("");
+    setSending(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({
+      email: value,
+      password,
+    });
+    setSending(false);
+    if (error) {
+      setErr(
+        /invalid login credentials/i.test(error.message)
+          ? "E-mail ou mot de passe incorrect. Laisse le mot de passe vide pour recevoir un lien à la place."
+          : "La connexion a échoué. Réessaie dans un instant."
+      );
+      return;
+    }
+    router.refresh();
+  };
 
   const send = async () => {
     if (mode === "nouveau" && !pseudo.trim()) {
@@ -122,20 +151,38 @@ export function JoinSignupForm({
           placeholder="camille@exemple.fr"
         />
       </label>
+      {mode === "connexion" && (
+        <label className="block mb-3">
+          <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
+            Ton mot de passe (si tu en as un)
+          </div>
+          <input
+            type="password"
+            autoComplete="current-password"
+            className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2.5 text-[15px] text-ink outline-none focus:border-river"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) =>
+              e.key === "Enter" && (password ? signInWithPassword() : send())
+            }
+            placeholder="Laisse vide pour recevoir un lien"
+          />
+        </label>
+      )}
       {err && <p className="text-sm font-semibold mb-2 text-refuse">{err}</p>}
       <button
-        onClick={send}
+        onClick={mode === "connexion" && password ? signInWithPassword : send}
         disabled={sending}
         className="w-full px-4 py-2.5 rounded-xl font-bold text-white bg-signal transition-transform active:scale-95 disabled:opacity-60"
       >
         {sending
-          ? "Envoi…"
+          ? "Un instant…"
           : mode === "nouveau"
             ? "Créer mon compte et rejoindre"
             : "Me connecter et rejoindre"}
       </button>
       <p className="text-xs mt-3 text-center text-ink-soft">
-        Pas de mot de passe : tu recevras un lien magique par e-mail. En
+        Sans mot de passe, tu recevras un lien magique par e-mail. En
         continuant, tu acceptes les{" "}
         <a href="/conditions" className="underline">
           conditions d&apos;utilisation
