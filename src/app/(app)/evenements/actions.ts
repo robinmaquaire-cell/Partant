@@ -35,6 +35,7 @@ export type EventInput = {
   lng: number | null;
   max: number;
   collaborative: boolean;
+  category: string | null;
   listIds: string[];
   equipment: EquipmentDraft[];
   roles: RoleDraft[];
@@ -77,6 +78,8 @@ function checkEventInput(input: EventInput): string | null {
     return "Le nombre max de participants doit être entre 1 et 1000.";
   // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
+  if ((input.category ?? "").trim().length > 30)
+    return "Le nom de catégorie est trop long (30 caractères max).";
   for (const it of input.equipment) {
     if (!it.name.trim() || it.name.trim().length > 60)
       return "Chaque objet de matériel doit avoir un nom (60 caractères max).";
@@ -135,6 +138,7 @@ export async function createEvent(
     p_list_ids: input.listIds,
     p_equipment: equipmentJson(input.equipment),
     p_roles: rolesJson(input.roles),
+    p_category: (input.category ?? "").trim() || null,
     p_template_name: templateName ? templateName.trim() : null,
   });
 
@@ -185,6 +189,7 @@ export async function updateEvent(
     p_equipment_removed: equipmentRemoved,
     p_roles_new: rolesJson(input.roles),
     p_roles_removed: rolesRemoved,
+    p_category: (input.category ?? "").trim() || null,
   });
 
   if (error)

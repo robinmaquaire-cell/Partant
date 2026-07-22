@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TABS = [
   { href: "/", label: "Événements", icon: "🗓" },
+  { href: "/calendrier", label: "Calendrier", icon: "📅" },
   { href: "/listes", label: "Listes", icon: "👥" },
   { href: "/profil", label: "Profil", icon: "⚙️" },
 ];
@@ -21,7 +22,7 @@ export function TabBar() {
           <Link
             key={t.href}
             href={t.href}
-            className={`flex flex-col items-center px-4 py-1 rounded-xl ${
+            className={`flex flex-col items-center px-3 py-1 rounded-xl ${
               active ? "text-signal font-bold" : "text-ink-soft font-medium"
             }`}
           >

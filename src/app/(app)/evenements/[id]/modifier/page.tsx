@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { EventForm } from "../../event-form";
+import { listOptionsFrom, type MyListRow } from "../../list-options";
 
 type EquipmentRow = {
   id: string;
@@ -26,7 +27,7 @@ export default async function ModifierEvenementPage(props: {
   const { data: ev } = await supabase
     .from("events")
     .select(
-      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, category, added_by), event_roles(id, name, capacity)"
+      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, category, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, category, added_by), event_roles(id, name, capacity)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -37,18 +38,22 @@ export default async function ModifierEvenementPage(props: {
   );
   if (!isOrganizer) redirect(`/evenements/${id}`);
 
-  const { data: lists } = await supabase.rpc("my_lists");
+  const [{ data: lists }, { data: cats }] = await Promise.all([
+    supabase.rpc("my_lists"),
+    supabase.from("events").select("category").not("category", "is", null),
+  ]);
   const equipment = (ev.equipment_items ?? []) as EquipmentRow[];
 
   return (
     <EventForm
-      lists={(lists ?? []).map(
-        (l: { id: string; name: string; color: string }) => ({
-          id: l.id,
-          name: l.name,
-          color: l.color,
-        })
-      )}
+      lists={listOptionsFrom((lists ?? []) as MyListRow[])}
+      categories={[
+        ...new Set(
+          ((cats ?? []) as { category: string | null }[])
+            .map((c) => (c.category ?? "").trim())
+            .filter(Boolean)
+        ),
+      ].sort((a, b) => a.localeCompare(b, "fr"))}
       edit={{
         eventId: ev.id,
         initial: {
@@ -61,6 +66,7 @@ export default async function ModifierEvenementPage(props: {
           lng: ev.lng,
           max: ev.max_participants,
           collaborative: ev.collaborative,
+          category: ev.category ?? "",
           listIds: (ev.event_lists ?? []).map(
             (el: { list_id: string }) => el.list_id
           ),

@@ -5,6 +5,8 @@ import { InviteLinkButton } from "./invite-link-button";
 import { MembersSection } from "./members-section";
 import { LeaveListButton } from "./leave-list-button";
 import { ListTitle } from "./rename-list";
+import { LogoEditor } from "./logo-editor";
+import { ListLogo } from "@/components/list-logo";
 
 type MemberRow = {
   user_id: string;
@@ -24,7 +26,7 @@ export default async function ListeDetailPage(props: {
 
   const { data: list } = await supabase
     .from("lists")
-    .select("id, name, color, members_visible")
+    .select("id, name, color, members_visible, emoji, logo_url")
     .eq("id", id)
     .maybeSingle();
   if (!list) notFound();
@@ -78,15 +80,41 @@ export default async function ListeDetailPage(props: {
         className="rounded-2xl p-5 mb-4 text-white"
         style={{ background: list.color }}
       >
-        <ListTitle listId={list.id} name={list.name} isAdmin={!!isAdmin} />
-        <div className="text-sm mt-1 opacity-90">
-          {membersHidden
-            ? "Membres masqués"
-            : `${members.length} membre${members.length > 1 ? "s" : ""} · Admin : ${admins
-                .map((a) => a.profiles?.pseudo || "?")
-                .join(", ")}`}
+        <div className="flex items-start gap-3">
+          {(list.emoji || list.logo_url) && (
+            <ListLogo
+              list={{
+                name: list.name,
+                color: list.color,
+                emoji: list.emoji,
+                logoUrl: list.logo_url,
+              }}
+              size={48}
+              onColor
+            />
+          )}
+          <div className="flex-1 min-w-0">
+            <ListTitle listId={list.id} name={list.name} isAdmin={!!isAdmin} />
+            <div className="text-sm mt-1 opacity-90">
+              {membersHidden
+                ? "Membres masqués"
+                : `${members.length} membre${members.length > 1 ? "s" : ""} · Admin : ${admins
+                    .map((a) => a.profiles?.pseudo || "?")
+                    .join(", ")}`}
+            </div>
+          </div>
         </div>
       </div>
+
+      {isAdmin && (
+        <LogoEditor
+          listId={list.id}
+          name={list.name}
+          color={list.color}
+          emoji={list.emoji}
+          logoUrl={list.logo_url}
+        />
+      )}
 
       {invite && <InviteLinkButton token={invite.token} isAdmin={!!isAdmin} listId={list.id} />}
 

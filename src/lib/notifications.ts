@@ -8,8 +8,8 @@ type MemberRow = {
   user_id: string;
   profiles: {
     pseudo: string | null;
-    contact_mode: string;
     contact: string | null;
+    email_notifications: boolean;
   } | null;
 };
 
@@ -40,7 +40,7 @@ export async function notifyEventCreated(eventId: string): Promise<void> {
 
     const { data: memberData } = await admin
       .from("list_members")
-      .select("user_id, profiles(pseudo, contact_mode, contact)")
+      .select("user_id, profiles(pseudo, contact, email_notifications)")
       .in("list_id", listIds);
     const members = (memberData ?? []) as unknown as MemberRow[];
 
@@ -56,7 +56,8 @@ export async function notifyEventCreated(eventId: string): Promise<void> {
       if (seen.has(m.user_id)) continue;
       seen.add(m.user_id);
       const p = m.profiles;
-      if (!p || p.contact_mode !== "email") continue;
+      // Chacun peut refuser les e-mails depuis son profil.
+      if (!p || !p.email_notifications) continue;
       const email = (p.contact ?? "").trim();
       if (!EMAIL_RE.test(email)) continue;
       messages.push(

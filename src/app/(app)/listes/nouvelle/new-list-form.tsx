@@ -4,18 +4,26 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createList } from "./actions";
 import { LIST_COLORS } from "@/lib/list-colors";
+import { EmojiPicker } from "@/components/emoji-picker";
+import { ListLogo } from "@/components/list-logo";
 
 export function NewListForm() {
   const router = useRouter();
   const [name, setName] = useState("");
   const [color, setColor] = useState(LIST_COLORS[0]);
+  const [emoji, setEmoji] = useState<string | null>(null);
   const [visible, setVisible] = useState(true);
   const [err, setErr] = useState("");
   const [pending, startTransition] = useTransition();
 
   const submit = () =>
     startTransition(async () => {
-      const result = await createList({ name, color, membersVisible: visible });
+      const result = await createList({
+        name,
+        color,
+        membersVisible: visible,
+        emoji,
+      });
       // En cas de succès, createList redirige : on n'arrive ici qu'en erreur.
       if (result && !result.ok) setErr(result.error);
     });
@@ -58,6 +66,19 @@ export function NewListForm() {
             />
           ))}
         </div>
+      </div>
+
+      <div className="mb-3">
+        <div className="flex items-center gap-2 mb-1">
+          <div className="text-xs font-bold uppercase tracking-wide text-ink-soft">
+            Logo
+          </div>
+          <ListLogo list={{ name, color, emoji }} size={28} />
+        </div>
+        <EmojiPicker value={emoji} onChange={setEmoji} />
+        <p className="text-xs mt-1 text-ink-soft">
+          Tu pourras aussi mettre une vraie image une fois la liste créée.
+        </p>
       </div>
 
       <div className="mb-3">

@@ -2,11 +2,14 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { JoinButton } from "./join-button";
 import { JoinSignupForm } from "@/components/join-signup-form";
+import { ListLogo } from "@/components/list-logo";
 
 type InviteInfo = {
   list_id: string;
   list_name: string;
   list_color: string;
+  list_emoji: string | null;
+  list_logo_url: string | null;
   member_count: number;
   already_member: boolean;
 };
@@ -52,12 +55,28 @@ export default async function InvitePage(props: {
             className="rounded-2xl p-5 mb-4 text-white"
             style={{ background: invite.list_color }}
           >
-            <div className="text-2xl font-extrabold font-display">
-              {invite.list_name}
-            </div>
-            <div className="text-sm mt-1 opacity-90">
-              {invite.member_count} membre
-              {invite.member_count > 1 ? "s" : ""}
+            <div className="flex items-center gap-3">
+              {(invite.list_emoji || invite.list_logo_url) && (
+                <ListLogo
+                  list={{
+                    name: invite.list_name,
+                    color: invite.list_color,
+                    emoji: invite.list_emoji,
+                    logoUrl: invite.list_logo_url,
+                  }}
+                  size={48}
+                  onColor
+                />
+              )}
+              <div>
+                <div className="text-2xl font-extrabold font-display">
+                  {invite.list_name}
+                </div>
+                <div className="text-sm mt-1 opacity-90">
+                  {invite.member_count} membre
+                  {invite.member_count > 1 ? "s" : ""}
+                </div>
+              </div>
             </div>
           </div>
 

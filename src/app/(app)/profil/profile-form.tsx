@@ -3,20 +3,18 @@
 import { useState, useTransition } from "react";
 import { signOut, updateProfile } from "./actions";
 
-const MODES = [
-  { id: "email", label: "E-mail" },
-  { id: "whatsapp", label: "WhatsApp" },
-  { id: "sms", label: "SMS" },
-] as const;
-
 export function ProfileForm({
   initial,
 }: {
-  initial: { pseudo: string; contactMode: string; contact: string };
+  initial: {
+    pseudo: string;
+    contact: string;
+    emailNotifications: boolean;
+  };
 }) {
   const [pseudo, setPseudo] = useState(initial.pseudo);
-  const [mode, setMode] = useState(initial.contactMode);
   const [contact, setContact] = useState(initial.contact);
+  const [emails, setEmails] = useState(initial.emailNotifications);
   const [message, setMessage] = useState<{
     kind: "ok" | "error";
     text: string;
@@ -28,8 +26,8 @@ export function ProfileForm({
     startSaving(async () => {
       const result = await updateProfile({
         pseudo,
-        contactMode: mode,
         contact,
+        emailNotifications: emails,
       });
       setMessage(
         result.ok
@@ -59,46 +57,33 @@ export function ProfileForm({
 
       <label className="block mb-3">
         <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-          Comment te prévenir ?
-        </div>
-        <div className="flex gap-2">
-          {MODES.map((m) => (
-            <button
-              key={m.id}
-              type="button"
-              onClick={() => setMode(m.id)}
-              className={`flex-1 py-2 rounded-xl text-sm font-bold border-[1.5px] ${
-                mode === m.id
-                  ? "bg-ink text-paper border-ink"
-                  : "text-ink-soft border-line"
-              }`}
-            >
-              {m.label}
-            </button>
-          ))}
-        </div>
-        {mode !== "email" && (
-          <p className="text-xs mt-1 font-semibold text-refuse">
-            ⚠️ Les notifications WhatsApp et SMS ne sont pas encore en service :
-            si tu choisis ce mode, tu ne recevras aucune notification. Choisis
-            « E-mail » pour être prévenu·e.
-          </p>
-        )}
-      </label>
-
-      <label className="block mb-3">
-        <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-          {mode === "email" ? "Ton adresse e-mail" : "Ton numéro"}
+          Ton adresse e-mail
         </div>
         <input
           className={inputClass}
-          type={mode === "email" ? "email" : "tel"}
-          inputMode={mode === "email" ? "email" : "tel"}
+          type="email"
+          inputMode="email"
           value={contact}
           onChange={(e) => setContact(e.target.value)}
-          placeholder={mode === "email" ? "camille@exemple.fr" : "06 12 34 56 78"}
+          placeholder="camille@exemple.fr"
         />
       </label>
+
+      <div className="rounded-2xl p-3 mb-3 bg-card border-[1.5px] border-line">
+        <button
+          type="button"
+          className="flex items-center gap-2 text-sm font-bold text-ink text-left"
+          onClick={() => setEmails(!emails)}
+        >
+          <span className="text-lg">{emails ? "☑" : "☐"}</span>
+          Me prévenir par e-mail
+        </button>
+        <p className="text-xs mt-1 text-ink-soft">
+          {emails
+            ? "Tu reçois un e-mail à la création d'un événement et un rappel la veille."
+            : "Tu ne recevras aucun e-mail. Pour suivre les événements, ouvre l'application ou branche ton calendrier (onglet Calendrier)."}
+        </p>
+      </div>
 
       {message && (
         <p

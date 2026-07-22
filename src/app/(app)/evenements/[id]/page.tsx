@@ -21,6 +21,7 @@ type EventRow = {
   lng: number | null;
   max_participants: number;
   collaborative: boolean;
+  category: string | null;
   created_by: string;
   event_lists: { lists: { id: string; name: string; color: string } | null }[];
   event_organizers: { user_id: string }[];
@@ -58,7 +59,7 @@ export default async function EvenementDetailPage(props: {
     .from("events")
     .select(
       `id, title, description, event_date, event_time, location_text, lat, lng,
-       max_participants, collaborative, created_by,
+       max_participants, collaborative, category, created_by,
        event_lists(lists(id, name, color)),
        event_organizers(user_id),
        rsvps(user_id, status),
@@ -213,6 +214,11 @@ export default async function EvenementDetailPage(props: {
           </div>
         )}
         <div className="mt-2 flex gap-2 flex-wrap">
+          {ev.category && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20">
+              🏷 {ev.category}
+            </span>
+          )}
           {lists.map((l) => (
             <span
               key={l.id}

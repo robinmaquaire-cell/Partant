@@ -25,8 +25,8 @@ type MemberRow = {
   list_id: string;
   user_id: string;
   profiles: {
-    contact_mode: string;
     contact: string | null;
+    email_notifications: boolean;
   } | null;
 };
 
@@ -64,7 +64,7 @@ export async function GET(request: Request) {
   ];
   const { data: memberData } = await admin
     .from("list_members")
-    .select("list_id, user_id, profiles(contact_mode, contact)")
+    .select("list_id, user_id, profiles(contact, email_notifications)")
     .in("list_id", allListIds);
   const members = (memberData ?? []) as unknown as MemberRow[];
 
@@ -75,13 +75,16 @@ export async function GET(request: Request) {
   const { data: guestProfiles } = guestIds.length
     ? await admin
         .from("profiles")
-        .select("id, contact_mode, contact")
+        .select("id, contact, email_notifications")
         .in("id", guestIds)
     : { data: [] };
   const contactOf = new Map(
     (guestProfiles ?? []).map((p) => [
       p.id,
-      { contact_mode: p.contact_mode as string, contact: p.contact as string | null },
+      {
+        contact: p.contact as string | null,
+        email_notifications: p.email_notifications as boolean,
+      },
     ])
   );
 
@@ -100,7 +103,7 @@ export async function GET(request: Request) {
       seen.add(m.user_id);
       if (noSet.has(m.user_id)) continue; // « Pas dispo » : on ne relance pas.
       const p = m.profiles;
-      if (!p || p.contact_mode !== "email") continue;
+      if (!p || !p.email_notifications) continue;
       const email = (p.contact ?? "").trim();
       if (!EMAIL_RE.test(email)) continue;
       messages.push(
@@ -118,7 +121,7 @@ export async function GET(request: Request) {
       if (seen.has(g.user_id) || noSet.has(g.user_id)) continue;
       seen.add(g.user_id);
       const p = contactOf.get(g.user_id);
-      if (!p || p.contact_mode !== "email") continue;
+      if (!p || !p.email_notifications) continue;
       const email = (p.contact ?? "").trim();
       if (!EMAIL_RE.test(email)) continue;
       messages.push(

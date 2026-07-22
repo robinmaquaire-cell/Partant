@@ -1,11 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ListLogo } from "@/components/list-logo";
 
 type ListRow = {
   id: string;
   name: string;
   color: string;
   members_visible: boolean;
+  emoji: string | null;
+  logo_url: string | null;
   role: "admin" | "member";
   member_count: number;
 };
@@ -39,9 +42,14 @@ export default async function ListesPage() {
           href={`/listes/${l.id}`}
           className="rounded-2xl p-4 mb-3 flex items-center gap-3 bg-card border-[1.5px] border-line"
         >
-          <div
-            className="w-10 h-10 rounded-xl shrink-0"
-            style={{ background: l.color }}
+          <ListLogo
+            list={{
+              name: l.name,
+              color: l.color,
+              emoji: l.emoji,
+              logoUrl: l.logo_url,
+            }}
+            size={40}
           />
           <div className="flex-1">
             <div className="font-bold">{l.name}</div>

@@ -1,24 +1,10 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { resetCalendarToken, setListInCalendar } from "./actions";
+import { resetCalendarToken } from "./actions";
 
-type ListChoice = {
-  id: string;
-  name: string;
-  color: string;
-  inCalendar: boolean;
-};
-
-// « Mon calendrier » : une URL secrète à coller dans Google Agenda ou
-// Apple Calendrier, alimentée par les listes que l'on choisit.
-export function CalendarSection({
-  url,
-  lists,
-}: {
-  url: string;
-  lists: ListChoice[];
-}) {
+// L'adresse secrète à coller dans Google Agenda / Apple Calendrier / Outlook.
+export function ShareCard({ url }: { url: string }) {
   const [copied, setCopied] = useState(false);
   const [err, setErr] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
@@ -35,13 +21,6 @@ export function CalendarSection({
     }
   };
 
-  const toggle = (list: ListChoice) =>
-    startTransition(async () => {
-      setErr("");
-      const result = await setListInCalendar(list.id, !list.inCalendar);
-      if (!result.ok) setErr(result.error);
-    });
-
   const reset = () =>
     startTransition(async () => {
       setErr("");
@@ -52,12 +31,9 @@ export function CalendarSection({
 
   return (
     <div className="rounded-2xl p-4 mb-4 bg-card border-[1.5px] border-line">
-      <h3 className="font-extrabold mb-1 font-display">
-        📅 Mon calendrier partagé
-      </h3>
       <p className="text-sm mb-3 text-ink-soft">
-        Ajoute ce lien dans Google Agenda (ou Apple Calendrier) et tes
-        événements « Partant ? » y apparaîtront automatiquement.
+        Colle cette adresse dans Google Agenda, Apple Calendrier ou Outlook :
+        les événements cochés plus bas y apparaîtront tout seuls.
       </p>
 
       <input
@@ -67,7 +43,7 @@ export function CalendarSection({
         className="w-full bg-paper border-[1.5px] border-line rounded-xl px-3 py-2.5 text-xs text-ink-soft outline-none mb-2"
         aria-label="Adresse de mon calendrier"
       />
-      <div className="flex gap-2 mb-3">
+      <div className="flex gap-2">
         <button
           type="button"
           onClick={copy}
@@ -85,8 +61,8 @@ export function CalendarSection({
       </div>
 
       {help && (
-        <div className="rounded-xl p-3 mb-3 bg-paper text-sm">
-          <div className="font-bold mb-1">Sur ordinateur, dans Google Agenda</div>
+        <div className="rounded-xl p-3 mt-3 bg-paper text-sm">
+          <div className="font-bold mb-1">Google Agenda (sur ordinateur)</div>
           <ol className="list-decimal ml-5 space-y-1 text-ink-soft">
             <li>Copie le lien ci-dessus.</li>
             <li>
@@ -103,54 +79,24 @@ export function CalendarSection({
             </li>
             <li>Colle le lien, puis « Ajouter un agenda ».</li>
           </ol>
-          <p className="mt-2 text-ink-soft">
-            Sur iPhone : Réglages → Applications → Calendrier → Comptes →
-            Ajouter un compte → Autre → Ajouter un abonnement à un calendrier.
+          <div className="font-bold mt-2 mb-1">Outlook</div>
+          <p className="text-ink-soft">
+            Calendrier → Ajouter un calendrier → S&apos;abonner à partir du web
+            → colle le lien.
+          </p>
+          <div className="font-bold mt-2 mb-1">iPhone</div>
+          <p className="text-ink-soft">
+            Réglages → Applications → Calendrier → Comptes → Ajouter un compte →
+            Autre → Ajouter un abonnement à un calendrier.
           </p>
           <p className="mt-2 text-ink-soft">
             ⏳ Google ne relit ce lien que toutes les quelques heures (parfois
             jusqu&apos;à 24 h) : un nouvel événement peut mettre un moment à
-            apparaître dans ton agenda. C&apos;est une limite de Google, pas de
-            l&apos;app — l&apos;app, elle, est toujours à jour.
+            apparaître. C&apos;est une limite de Google, pas de
+            l&apos;application.
           </p>
         </div>
       )}
-
-      <div className="text-xs font-bold uppercase tracking-wide mb-2 text-ink-soft">
-        Listes envoyées dans mon calendrier
-      </div>
-      {lists.length === 0 && (
-        <p className="text-sm mb-2 text-ink-soft">
-          Tu n&apos;es membre d&apos;aucune liste pour l&apos;instant.
-        </p>
-      )}
-      {lists.map((l) => (
-        <button
-          key={l.id}
-          type="button"
-          disabled={pending}
-          onClick={() => toggle(l)}
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-xl mb-1 text-sm font-semibold text-left text-ink border-[1.5px] disabled:opacity-60"
-          style={{
-            background: l.inCalendar ? l.color + "1A" : "#FFFFFF",
-            borderColor: l.inCalendar ? l.color : "#DCE6E2",
-          }}
-        >
-          <span className="text-lg leading-none">
-            {l.inCalendar ? "☑" : "☐"}
-          </span>
-          <span
-            className="w-3 h-3 rounded-full"
-            style={{ background: l.color }}
-          />
-          {l.name}
-        </button>
-      ))}
-
-      <p className="text-xs mt-2 text-ink-soft">
-        Les événements auxquels tu as répondu « Pas dispo » n&apos;apparaissent
-        pas dans ton agenda.
-      </p>
 
       {confirmReset ? (
         <div className="rounded-xl p-3 mt-3 bg-refuse/10 border-[1.5px] border-refuse/40">

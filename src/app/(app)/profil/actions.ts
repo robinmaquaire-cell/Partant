@@ -5,14 +5,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const CONTACT_MODES = ["email", "whatsapp", "sms"] as const;
 
 export type UpdateProfileResult = { ok: true } | { ok: false; error: string };
 
 export async function updateProfile(input: {
   pseudo: string;
-  contactMode: string;
   contact: string;
+  emailNotifications: boolean;
 }): Promise<UpdateProfileResult> {
   const supabase = await createClient();
   const {
@@ -22,21 +21,21 @@ export async function updateProfile(input: {
 
   const pseudo = input.pseudo.trim();
   const contact = input.contact.trim();
-  const contactMode = input.contactMode;
 
   if (!pseudo) return { ok: false, error: "Renseigne un pseudo." };
   if (pseudo.length > 40)
     return { ok: false, error: "Ce pseudo est trop long (40 caractères max)." };
-  if (!CONTACT_MODES.includes(contactMode as (typeof CONTACT_MODES)[number]))
-    return { ok: false, error: "Mode de contact inconnu." };
-  if (contactMode === "email" && !EMAIL_RE.test(contact))
+  if (!EMAIL_RE.test(contact))
     return { ok: false, error: "Cette adresse e-mail n'est pas valide." };
-  if (contactMode !== "email" && contact.replace(/\D/g, "").length < 6)
-    return { ok: false, error: "Ce numéro semble incomplet." };
 
   const { error } = await supabase
     .from("profiles")
-    .update({ pseudo, contact_mode: contactMode, contact })
+    .update({
+      pseudo,
+      contact_mode: "email",
+      contact,
+      email_notifications: input.emailNotifications,
+    })
     .eq("id", user.id);
 
   if (error)
@@ -68,47 +67,6 @@ export async function deleteTemplate(
     .eq("id", templateId);
   if (error)
     return { ok: false, error: "La suppression a échoué. Réessaie dans un instant." };
-
-  revalidatePath("/profil");
-  return { ok: true };
-}
-
-// ——— Calendrier partagé ———
-
-// Choisir si une liste alimente mon calendrier partagé.
-export async function setListInCalendar(
-  listId: string,
-  on: boolean
-): Promise<UpdateProfileResult> {
-  if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
-
-  const { error } = await supabase.rpc("set_list_in_calendar", {
-    p_list: listId,
-    p_on: on,
-  });
-  if (error)
-    return { ok: false, error: "La modification a échoué. Réessaie dans un instant." };
-
-  revalidatePath("/profil");
-  return { ok: true };
-}
-
-// Changer de lien de calendrier : l'ancien cesse aussitôt de fonctionner.
-export async function resetCalendarToken(): Promise<UpdateProfileResult> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
-
-  const { error } = await supabase.rpc("reset_calendar_token");
-  if (error)
-    return { ok: false, error: "La création du lien a échoué. Réessaie dans un instant." };
 
   revalidatePath("/profil");
   return { ok: true };

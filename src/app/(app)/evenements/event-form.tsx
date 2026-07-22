@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { parseGps } from "@/lib/parse-gps";
 import { GpsMap } from "@/components/gps-map";
 import { SUGGESTED_CATEGORIES } from "@/lib/equipment-categories";
+import { ListLogo } from "@/components/list-logo";
 import {
   createEvent,
   updateEvent,
@@ -22,11 +23,18 @@ export type TemplatePayload = {
   lng?: number | null;
   max_participants?: number;
   collaborative?: boolean;
+  category?: string | null;
   equipment?: EquipmentDraft[];
   roles?: RoleDraft[];
 };
 
-type ListOption = { id: string; name: string; color: string };
+type ListOption = {
+  id: string;
+  name: string;
+  color: string;
+  emoji: string | null;
+  logoUrl: string | null;
+};
 type TemplateOption = { id: string; name: string; payload: TemplatePayload };
 type ExistingItem = {
   id: string;
@@ -49,11 +57,22 @@ type EditProps = {
     lng: number | null;
     max: number;
     collaborative: boolean;
+    category: string;
     listIds: string[];
   };
   existingEquipment: ExistingItem[];
   existingRoles: ExistingRole[];
 };
+
+// Suggestions de catégories d'événement (l'organisateur peut taper la sienne).
+const EVENT_CATEGORIES = [
+  "Sport",
+  "Apéro",
+  "Repas",
+  "Culture",
+  "Week-end",
+  "Réunion",
+];
 
 const label = "text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft";
 const input =
@@ -62,10 +81,12 @@ const input =
 export function EventForm({
   lists,
   templates = [],
+  categories = [],
   edit,
 }: {
   lists: ListOption[];
   templates?: TemplateOption[];
+  categories?: string[]; // catégories déjà utilisées, en suggestion
   edit?: EditProps;
 }) {
   const router = useRouter();
@@ -87,6 +108,7 @@ export function EventForm({
   const [collaborative, setCollaborative] = useState(
     init?.collaborative ?? false
   );
+  const [category, setCategory] = useState(init?.category ?? "");
   const [listIds, setListIds] = useState<string[]>(init?.listIds ?? []);
 
   // Matériel : objets déjà en base (mode édition) + nouveaux objets.
@@ -137,6 +159,7 @@ export function EventForm({
     );
     setMax(p.max_participants ?? 10);
     setCollaborative(p.collaborative ?? false);
+    setCategory(p.category ?? "");
     setEquipment(
       (p.equipment ?? []).map((e) => ({
         name: e.name,
@@ -198,6 +221,7 @@ export function EventForm({
         lng: coords?.lng ?? null,
         max,
         collaborative,
+        category: category.trim() || null,
         listIds,
         equipment,
         roles,
@@ -267,6 +291,23 @@ export function EventForm({
           onChange={(e) => setTitle(e.target.value)}
           placeholder="ex. Sortie kayak au lac"
         />
+      </label>
+
+      <label className="block mb-3">
+        <div className={label}>Catégorie (facultatif)</div>
+        <input
+          className={input}
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+          list="categories-evenement"
+          maxLength={30}
+          placeholder="ex. Sport, Apéro, Culture…"
+        />
+        <datalist id="categories-evenement">
+          {[...new Set([...categories, ...EVENT_CATEGORIES])].map((c) => (
+            <option key={c} value={c} />
+          ))}
+        </datalist>
       </label>
 
       <label className="block mb-3">
@@ -639,9 +680,14 @@ export function EventForm({
                 borderColor: on ? l.color : "#DCE6E2",
               }}
             >
-              <span
-                className="w-3 h-3 rounded-full"
-                style={{ background: l.color }}
+              <ListLogo
+                list={{
+                  name: l.name,
+                  color: l.color,
+                  emoji: l.emoji,
+                  logoUrl: l.logoUrl,
+                }}
+                size={24}
               />
               {l.name} {on ? "✓" : ""}
             </button>

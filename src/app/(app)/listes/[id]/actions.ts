@@ -116,6 +116,32 @@ export async function renameList(
   return { ok: true };
 }
 
+// Choisir l'emoji qui sert de logo à la liste (réservé aux admins).
+export async function setListEmoji(
+  listId: string,
+  emoji: string | null
+): Promise<ActionResult> {
+  if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
+  const value = (emoji ?? "").trim();
+  if (value.length > 8) return { ok: false, error: "Logo invalide." };
+
+  const { supabase, user } = await requireUser();
+  if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
+
+  const { data, error } = await supabase
+    .from("lists")
+    .update({ emoji: value || null })
+    .eq("id", listId)
+    .select("id");
+  if (error) return { ok: false, error: "La sauvegarde a échoué." };
+  if (!data || data.length === 0)
+    return { ok: false, error: "Seuls les admins de la liste peuvent la modifier." };
+
+  revalidatePath(`/listes/${listId}`);
+  revalidatePath("/listes");
+  return { ok: true };
+}
+
 export async function regenerateInvite(listId: string): Promise<ActionResult> {
   if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
   const { supabase, user } = await requireUser();

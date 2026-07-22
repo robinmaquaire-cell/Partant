@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { DateBlock } from "./date-block";
 import { RelTime } from "./rel-time";
+import { ListLogo } from "./list-logo";
 
 export type EventCardData = {
   id: string;
@@ -9,7 +10,14 @@ export type EventCardData = {
   event_time: string;
   location_text: string;
   max_participants: number;
-  lists: { id: string; name: string; color: string }[];
+  category: string | null;
+  lists: {
+    id: string;
+    name: string;
+    color: string;
+    emoji: string | null;
+    logoUrl: string | null;
+  }[];
   yesCount: number;
   myStatus: "yes" | "no" | null;
 };
@@ -31,16 +39,32 @@ export function EventCard({ ev }: { ev: EventCardData }) {
           {ev.lists.map((l) => (
             <span
               key={l.id}
-              className="text-xs font-semibold px-2 py-0.5 rounded-full"
+              className="text-xs font-semibold px-2 py-0.5 rounded-full inline-flex items-center gap-1"
               style={{
                 background: l.color + "1A",
                 color: l.color,
                 border: `1px solid ${l.color}40`,
               }}
             >
+              {(l.emoji || l.logoUrl) && (
+                <ListLogo
+                  list={{
+                    name: l.name,
+                    color: l.color,
+                    emoji: l.emoji,
+                    logoUrl: l.logoUrl,
+                  }}
+                  size={16}
+                />
+              )}
               {l.name}
             </span>
           ))}
+          {ev.category && (
+            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine">
+              🏷 {ev.category}
+            </span>
+          )}
           {ev.lists.length === 0 && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine">
               🔗 Sur invitation
