@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { deletePushSubscription, savePushSubscription } from "./push-actions";
+import {
+  deletePushSubscription,
+  savePushSubscription,
+  sendTestPush,
+} from "./push-actions";
 
 // Convertit la clé publique VAPID (texte) au format attendu par le navigateur.
 function urlBase64ToBuffer(base64: string): ArrayBuffer {
@@ -26,6 +30,9 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
   const [state, setState] = useState<State>("checking");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [testMsg, setTestMsg] = useState<{ ok: boolean; text: string } | null>(
+    null
+  );
 
   // Est-on dans l'app installée (mode « standalone ») ?
   const isStandalone = () =>
@@ -105,6 +112,21 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
     setBusy(false);
   };
 
+  const test = async () => {
+    setTestMsg(null);
+    setBusy(true);
+    const result = await sendTestPush();
+    setBusy(false);
+    setTestMsg(
+      result.ok
+        ? {
+            ok: true,
+            text: "Notification envoyée ! Elle devrait apparaître d'ici quelques secondes.",
+          }
+        : { ok: false, text: result.error }
+    );
+  };
+
   const disable = async () => {
     setErr("");
     setBusy(true);
@@ -138,14 +160,33 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
             Cet appareil reçoit les notifications : nouvel événement dans tes
             listes, rappel la veille.
           </p>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={disable}
-            className="px-4 py-2.5 rounded-xl font-bold text-refuse border-[1.5px] border-refuse/40 disabled:opacity-60"
-          >
-            {busy ? "Un instant…" : "Désactiver sur cet appareil"}
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={test}
+              className="px-4 py-2.5 rounded-xl font-bold text-white bg-ink disabled:opacity-60"
+            >
+              {busy ? "Un instant…" : "Envoyer un test"}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={disable}
+              className="px-4 py-2.5 rounded-xl font-bold text-refuse border-[1.5px] border-refuse/40 disabled:opacity-60"
+            >
+              Désactiver
+            </button>
+          </div>
+          {testMsg && (
+            <p
+              className={`text-sm font-semibold mt-2 ${
+                testMsg.ok ? "text-ok" : "text-refuse"
+              }`}
+            >
+              {testMsg.text}
+            </p>
+          )}
         </>
       )}
 

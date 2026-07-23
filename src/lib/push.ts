@@ -12,6 +12,11 @@ export type PushPayload = {
 
 let configured: boolean | null = null;
 
+// Les clés VAPID sont-elles en place côté serveur ? (diagnostic)
+export function isPushConfigured(): boolean {
+  return ensureConfigured();
+}
+
 // Prépare la librairie avec les clés VAPID (l'identité de l'expéditeur).
 // Renvoie false si les clés ne sont pas configurées : on n'envoie alors rien.
 function ensureConfigured(): boolean {
