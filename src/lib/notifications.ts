@@ -1,8 +1,17 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { eventCreatedEmail, sendEmails } from "@/lib/email";
+import { appUrl, eventCreatedEmail, sendEmails } from "@/lib/email";
+import { pushToUsers } from "@/lib/push";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function frenchDateShort(date: string): string {
+  return new Date(date + "T00:00").toLocaleDateString("fr-FR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  });
+}
 
 type MemberRow = {
   user_id: string;
@@ -50,11 +59,14 @@ export async function notifyEventCreated(eventId: string): Promise<void> {
 
     // Un e-mail par personne (même si elle est dans plusieurs listes),
     // jamais au créateur, et seulement si son contact est un e-mail valide.
+    // On collecte au passage les destinataires des notifications push.
     const seen = new Set<string>([ev.created_by]);
+    const pushTargets: string[] = [];
     const messages = [];
     for (const m of members) {
       if (seen.has(m.user_id)) continue;
       seen.add(m.user_id);
+      pushTargets.push(m.user_id);
       const p = m.profiles;
       // Chacun peut refuser les e-mails depuis son profil.
       if (!p || !p.email_notifications) continue;
@@ -75,7 +87,20 @@ export async function notifyEventCreated(eventId: string): Promise<void> {
     }
 
     const sent = await sendEmails(messages);
-    console.log(`[notif] Événement ${ev.id} : ${sent} e-mail(s) envoyé(s).`);
+
+    // Notification push sur les téléphones où elle est activée.
+    const pushed = await pushToUsers(admin, pushTargets, {
+      title: `Nouveau : ${ev.title}`,
+      body: `${frenchDateShort(ev.event_date)} à ${ev.event_time.slice(0, 5)}${
+        ev.location_text ? ` · ${ev.location_text}` : ""
+      } — proposé par ${creatorPseudo}`,
+      url: `${appUrl()}/evenements/${ev.id}`,
+      tag: `event-${ev.id}`,
+    });
+
+    console.log(
+      `[notif] Événement ${ev.id} : ${sent} e-mail(s), ${pushed} notif(s) push.`
+    );
   } catch (e) {
     console.error("[notif] Notification de création échouée :", e);
   }

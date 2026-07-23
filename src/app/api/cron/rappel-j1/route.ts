@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { reminderEmail, sendEmails, type EmailMessage } from "@/lib/email";
+import { appUrl, reminderEmail, sendEmails, type EmailMessage } from "@/lib/email";
+import { pushToUsers, type PushPayload } from "@/lib/push";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -89,6 +90,8 @@ export async function GET(request: Request) {
   );
 
   const messages: EmailMessage[] = [];
+  // Un envoi push par événement, vers ceux qui n'ont pas dit « non ».
+  const pushJobs: { userIds: string[]; payload: PushPayload }[] = [];
   for (const ev of events) {
     const evListIds = new Set(ev.event_lists.map((el) => el.list_id));
     const noSet = new Set(
@@ -98,10 +101,12 @@ export async function GET(request: Request) {
       ev.rsvps.filter((r) => r.status === "yes").map((r) => r.user_id)
     );
     const seen = new Set<string>();
+    const pushTargets: string[] = [];
     for (const m of members) {
       if (!evListIds.has(m.list_id) || seen.has(m.user_id)) continue;
       seen.add(m.user_id);
       if (noSet.has(m.user_id)) continue; // « Pas dispo » : on ne relance pas.
+      pushTargets.push(m.user_id);
       const p = m.profiles;
       if (!p || !p.email_notifications) continue;
       const email = (p.contact ?? "").trim();
@@ -120,6 +125,7 @@ export async function GET(request: Request) {
     for (const g of ev.event_guests) {
       if (seen.has(g.user_id) || noSet.has(g.user_id)) continue;
       seen.add(g.user_id);
+      pushTargets.push(g.user_id);
       const p = contactOf.get(g.user_id);
       if (!p || !p.email_notifications) continue;
       const email = (p.contact ?? "").trim();
@@ -135,9 +141,26 @@ export async function GET(request: Request) {
         })
       );
     }
+    if (pushTargets.length > 0)
+      pushJobs.push({
+        userIds: pushTargets,
+        payload: {
+          title: `Demain : ${ev.title}`,
+          body: `À ${ev.event_time.slice(0, 5)}${
+            ev.location_text ? ` · ${ev.location_text}` : ""
+          }`,
+          url: `${appUrl()}/evenements/${ev.id}`,
+          tag: `event-${ev.id}`,
+        },
+      });
   }
 
   const sent = await sendEmails(messages);
-  console.log(`[cron] Rappel J-1 du ${tomorrow} : ${events.length} événement(s), ${sent} e-mail(s).`);
-  return NextResponse.json({ date: tomorrow, events: events.length, sent });
+  let pushed = 0;
+  for (const job of pushJobs)
+    pushed += await pushToUsers(admin, job.userIds, job.payload);
+  console.log(
+    `[cron] Rappel J-1 du ${tomorrow} : ${events.length} événement(s), ${sent} e-mail(s), ${pushed} notif(s) push.`
+  );
+  return NextResponse.json({ date: tomorrow, events: events.length, sent, pushed });
 }

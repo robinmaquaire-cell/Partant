@@ -4,6 +4,7 @@ import { ProfileForm } from "./profile-form";
 import { TemplatesSection } from "./templates-section";
 import { AvatarUpload } from "./avatar-upload";
 import { PasswordSection } from "./password-section";
+import { PushSection } from "./push-section";
 import { DeleteAccount } from "./delete-account";
 import Link from "next/link";
 
@@ -59,6 +60,9 @@ export default async function ProfilPage(props: {
         }}
       />
       <PasswordSection highlight={mdp === "1"} />
+      {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
+        <PushSection vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
+      )}
       <TemplatesSection
         templates={((templates ?? []) as TemplateRow[]).map((t) => ({
           id: t.id,
