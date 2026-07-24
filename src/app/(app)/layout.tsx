@@ -37,16 +37,18 @@ export default async function AppLayout({
         >
           Partants<span className="text-signal"> ?</span>
         </Link>
-        <Link href="/profil" aria-label="Mon profil">
-          <Avatar
-            pseudo={profile?.pseudo || user.email || "?"}
-            url={profile?.avatar_url}
-            size={36}
-          />
-        </Link>
+        <div className="flex items-center gap-3">
+          <FeedbackButton userId={user.id} />
+          <Link href="/profil" aria-label="Mon profil">
+            <Avatar
+              pseudo={profile?.pseudo || user.email || "?"}
+              url={profile?.avatar_url}
+              size={36}
+            />
+          </Link>
+        </div>
       </header>
       <main className="px-5 max-w-lg mx-auto w-full">{children}</main>
-      <FeedbackButton userId={user.id} />
       <TabBar />
     </div>
   );

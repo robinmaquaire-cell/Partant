@@ -157,17 +157,18 @@ export function FeedbackButton({ userId }: { userId: string }) {
 
   return (
     <>
-      {/* Bouton flottant, au-dessus de la barre d'onglets */}
+      {/* Déclencheur, placé dans le header à côté de la photo de profil */}
       <button
         type="button"
         onClick={() => {
           setDone(false);
           setOpen(true);
         }}
-        className="fixed right-4 bottom-[92px] z-30 px-4 py-2.5 rounded-full font-bold text-white bg-river shadow-lg transition-transform active:scale-95"
+        className="w-9 h-9 flex items-center justify-center rounded-full border-[1.5px] border-line bg-card text-lg shrink-0 transition-transform active:scale-95"
         aria-label="Donner mon avis"
+        title="Donner mon avis"
       >
-        💬 Mon avis
+        💬
       </button>
 
       {open && (
