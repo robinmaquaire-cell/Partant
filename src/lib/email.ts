@@ -12,7 +12,7 @@ const FROM = () =>
 
 export function appUrl(): string {
   return (
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://partant-six.vercel.app"
+    process.env.NEXT_PUBLIC_APP_URL ?? "https://partants.app"
   ).replace(/\/$/, "");
 }
 

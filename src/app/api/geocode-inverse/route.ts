@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 // respecter leur politique : 1 requête/seconde max et User-Agent identifiant
 // l'application. https://operations.osmfoundation.org/policies/nominatim/
 
-const USER_AGENT = "PartantApp/0.1 (+https://partant-six.vercel.app)";
+const USER_AGENT = "PartantsApp/0.1 (+https://partants.app)";
 
 // Espacement des appels (au mieux, par instance serveur).
 let lastCallAt = 0;
