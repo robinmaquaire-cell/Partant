@@ -39,7 +39,7 @@ export default async function PartageEvenementPage(props: {
   return (
     <div className="min-h-screen flex flex-col justify-center px-6 bg-pine">
       <div className="text-4xl font-extrabold mb-2 font-display text-paper">
-        Partant<span className="text-signal"> ?</span>
+        Partants<span className="text-signal"> ?</span>
       </div>
 
       {!invite ? (

@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 export const metadata = {
-  title: "Conditions d'utilisation — Partant ?",
+  title: "Conditions d'utilisation — Partants ?",
 };
 
 const h = "font-extrabold font-display text-lg mt-6 mb-2";
@@ -21,7 +21,7 @@ export default function ConditionsPage() {
 
         <h2 className={h}>Le service</h2>
         <p className={p}>
-          « Partant ? » aide des groupes d&apos;amis à organiser des sorties :
+          « Partants ? » aide des groupes d&apos;amis à organiser des sorties :
           listes de diffusion privées, événements, réponses de participation et
           répartition du matériel. Le service est fourni tel quel, sans garantie
           de disponibilité, par son créateur, à titre non commercial.

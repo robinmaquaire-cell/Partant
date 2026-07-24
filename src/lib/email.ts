@@ -8,7 +8,7 @@ export type EmailMessage = {
 };
 
 const FROM = () =>
-  process.env.EMAIL_FROM ?? "Partant ? <onboarding@resend.dev>";
+  process.env.EMAIL_FROM ?? "Partants ? <onboarding@resend.dev>";
 
 export function appUrl(): string {
   return (
@@ -64,7 +64,7 @@ function escapeHtml(s: string): string {
 function layout(content: string, footer: string): string {
   return `<!doctype html><html lang="fr"><body style="margin:0;background:#F1F6F4;color:#10302C;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
 <div style="max-width:480px;margin:0 auto;padding:24px 16px">
-  <div style="font-size:24px;font-weight:800;margin-bottom:16px">Partant<span style="color:#FF6B35"> ?</span></div>
+  <div style="font-size:24px;font-weight:800;margin-bottom:16px">Partants<span style="color:#FF6B35"> ?</span></div>
   <div style="background:#FFFFFF;border:1.5px solid #DCE6E2;border-radius:16px;padding:20px">${content}</div>
   <p style="font-size:12px;color:#3D5A55;margin-top:16px">${footer}</p>
 </div></body></html>`;
@@ -102,8 +102,8 @@ export function eventCreatedEmail(input: {
 <p style="margin:0 0 4px">🗓 ${frenchDate(input.date)} à ${escapeHtml(input.time)}</p>
 ${input.location ? `<p style="margin:0 0 4px">📍 ${escapeHtml(input.location)}</p>` : ""}
 <p style="margin:0 0 16px;color:#3D5A55">Proposé par ${escapeHtml(input.creatorPseudo)} · ${escapeHtml(input.listNames.join(", "))}</p>
-${button(url, "Partant ? Je réponds")}`,
-      "Tu reçois cet e-mail parce que tu es membre de cette liste sur Partant ?."
+${button(url, "Partants ? Je réponds")}`,
+      "Tu reçois cet e-mail parce que tu es membre de cette liste sur Partants ?."
     ),
   };
 }
@@ -131,7 +131,7 @@ ${
     ? `<p style="margin:0 0 16px;color:#2E9E6B;font-weight:700">Tu as dit « Partant ! » — pense à ton matériel.</p>${button(url, "Revoir les détails")}`
     : `<p style="margin:0 0 16px;color:#3D5A55">Tu n'as pas encore répondu.</p>${button(url, "Je réponds maintenant")}`
 }`,
-      "Rappel automatique de Partant ? la veille de chaque événement."
+      "Rappel automatique de Partants ? la veille de chaque événement."
     ),
   };
 }
@@ -142,13 +142,13 @@ export function welcomeEmail(input: {
 }): EmailMessage {
   return {
     to: input.to,
-    subject: "Bienvenue sur Partant ? 🛶",
+    subject: "Bienvenue sur Partants ? 🛶",
     html: layout(
       `<h1 style="font-size:20px;margin:0 0 8px">Bienvenue ${escapeHtml(input.pseudo)} !</h1>
-<p style="margin:0 0 8px">Ton compte est prêt. Sur Partant ?, tu reçois les propositions de sortie de tes listes, tu réponds en un geste, et tu vois qui ramène quoi.</p>
+<p style="margin:0 0 8px">Ton compte est prêt. Sur Partants ?, tu reçois les propositions de sortie de tes listes, tu réponds en un geste, et tu vois qui ramène quoi.</p>
 <p style="margin:0 0 16px;color:#3D5A55">Astuce : ajoute l'application à ton écran d'accueil pour la retrouver comme une vraie appli.</p>
-${button(appUrl(), "Ouvrir Partant ?")}`,
-      "E-mail de bienvenue envoyé à la création de ton compte Partant ?."
+${button(appUrl(), "Ouvrir Partants ?")}`,
+      "E-mail de bienvenue envoyé à la création de ton compte Partants ?."
     ),
   };
 }

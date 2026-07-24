@@ -98,7 +98,7 @@ export async function GET(
     "PRODID:-//Partant//Agenda//FR",
     "CALSCALE:GREGORIAN",
     "METHOD:PUBLISH",
-    "X-WR-CALNAME:Partant ?",
+    "X-WR-CALNAME:Partants ?",
     "X-WR-TIMEZONE:Europe/Paris",
     // Indication de fréquence de rafraîchissement (respectée par Apple, pas Google).
     "REFRESH-INTERVAL;VALUE=DURATION:PT2H",

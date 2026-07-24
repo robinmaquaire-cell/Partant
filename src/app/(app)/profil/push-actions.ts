@@ -77,7 +77,7 @@ export async function sendTestPush(): Promise<Result> {
     };
 
   const sent = await pushToUsers(admin, [user.id], {
-    title: "Partant ? — test 🎉",
+    title: "Partants ? — test 🎉",
     body: "Si tu vois cette notification, tout fonctionne !",
     url: `${appUrl()}/profil`,
     tag: "test-partant",

@@ -17,9 +17,9 @@ self.addEventListener("push", (event) => {
   try {
     data = event.data ? event.data.json() : {};
   } catch {
-    data = { title: "Partant ?", body: event.data ? event.data.text() : "" };
+    data = { title: "Partants ?", body: event.data ? event.data.text() : "" };
   }
-  const title = data.title || "Partant ?";
+  const title = data.title || "Partants ?";
   const options = {
     body: data.body || "",
     icon: "/icon-192.png",

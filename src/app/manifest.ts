@@ -4,8 +4,8 @@ import type { MetadataRoute } from "next";
 // rend « Partant ? » installable sur l'écran d'accueil du téléphone.
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Partant ?",
-    short_name: "Partant ?",
+    name: "Partants ?",
+    short_name: "Partants ?",
     description:
       "Organise des sorties entre potes, sans noyer les groupes de discussion.",
     lang: "fr",

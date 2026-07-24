@@ -34,7 +34,7 @@ export default async function AppLayout({
           href="/"
           className="text-2xl font-extrabold tracking-tight font-display text-ink"
         >
-          Partant<span className="text-signal"> ?</span>
+          Partants<span className="text-signal"> ?</span>
         </Link>
         <Link href="/profil" aria-label="Mon profil">
           <Avatar

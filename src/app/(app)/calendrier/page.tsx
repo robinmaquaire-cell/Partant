@@ -117,7 +117,7 @@ export default async function CalendrierPage() {
         Mon calendrier
       </h2>
       <p className="text-sm mb-4 text-ink-soft">
-        Tout ce qui t&apos;arrive sur Partant ?, et ce que tu envoies vers ton
+        Tout ce qui t&apos;arrive sur Partants ?, et ce que tu envoies vers ton
         agenda habituel.
       </p>
 

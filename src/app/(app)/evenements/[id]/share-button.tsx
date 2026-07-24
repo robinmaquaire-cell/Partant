@@ -20,12 +20,12 @@ export function ShareButton({
   const share = async () => {
     const url = `${window.location.origin}${path}`;
     const text = withInvite
-      ? `Partant ? « ${title} » — rejoins-nous :`
-      : `Partant ? — l'appli où on organise nos sorties :`;
+      ? `Partants ? « ${title} » — rejoins-nous :`
+      : `Partants ? — l'appli où on organise nos sorties :`;
 
     if (navigator.share) {
       try {
-        await navigator.share({ title: `Partant ? — ${title}`, text, url });
+        await navigator.share({ title: `Partants ? — ${title}`, text, url });
         return;
       } catch {
         // Partage annulé ou refusé : on retombe sur la copie.

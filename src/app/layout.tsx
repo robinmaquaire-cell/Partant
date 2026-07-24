@@ -15,11 +15,11 @@ const publicSans = Public_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Partant ?",
+  title: "Partants ?",
   description:
     "Organise des sorties entre potes, sans noyer les groupes de discussion.",
   icons: { apple: "/apple-touch-icon.png" },
-  appleWebApp: { capable: true, title: "Partant ?", statusBarStyle: "default" },
+  appleWebApp: { capable: true, title: "Partants ?", statusBarStyle: "default" },
 };
 
 export const viewport: Viewport = {

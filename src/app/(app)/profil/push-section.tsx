@@ -213,20 +213,20 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
           l&apos;application ajoutée à l&apos;écran d&apos;accueil. Dans Safari :
           bouton <strong>Partager</strong> (le carré avec une flèche) →{" "}
           <strong>Sur l&apos;écran d&apos;accueil</strong>. Ouvre ensuite
-          Partant ? depuis l&apos;icône, puis reviens ici pour activer.
+          Partants ? depuis l&apos;icône, puis reviens ici pour activer.
         </p>
       )}
 
       {state === "blocked" && (
         <p className="text-sm text-refuse font-semibold">
-          Les notifications sont bloquées pour Partant ? dans les réglages de ton
+          Les notifications sont bloquées pour Partants ? dans les réglages de ton
           navigateur. Réautorise-les là-bas, puis reviens activer ici.
         </p>
       )}
 
       {state === "unsupported" && (
         <p className="text-sm text-ink-soft">
-          Ce navigateur ne gère pas les notifications. Installe Partant ? sur ton
+          Ce navigateur ne gère pas les notifications. Installe Partants ? sur ton
           écran d&apos;accueil, ou utilise Chrome / Safari récent.
         </p>
       )}

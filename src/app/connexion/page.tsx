@@ -11,7 +11,7 @@ export default async function ConnexionPage(props: {
   return (
     <div className="min-h-screen flex flex-col justify-center px-6 bg-pine">
       <div className="text-5xl font-extrabold mb-2 font-display text-paper">
-        Partant<span className="text-signal"> ?</span>
+        Partants<span className="text-signal"> ?</span>
       </div>
       <p className="mb-8 text-base text-sand">
         Organise des sorties entre potes, sans noyer les groupes de discussion.
