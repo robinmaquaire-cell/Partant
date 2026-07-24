@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { TabBar } from "@/components/tab-bar";
 import { Avatar } from "@/components/avatar";
+import { FeedbackButton } from "@/components/feedback-button";
 
 export default async function AppLayout({
   children,
@@ -45,6 +46,7 @@ export default async function AppLayout({
         </Link>
       </header>
       <main className="px-5 max-w-lg mx-auto w-full">{children}</main>
+      <FeedbackButton userId={user.id} />
       <TabBar />
     </div>
   );

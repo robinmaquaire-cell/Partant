@@ -10,6 +10,7 @@ import { OrganizersSection } from "./organizers-section";
 import { RolesSection } from "./roles-section";
 import { ShareSection } from "./share-section";
 import { ShareButton } from "./share-button";
+import { LocationActions } from "./location-actions";
 import { ChatSection, type ChatMessage } from "./chat-section";
 
 type EventRow = {
@@ -246,19 +247,9 @@ export default async function EvenementDetailPage(props: {
           🗓 {longDate} à {ev.event_time.slice(0, 5)} ·{" "}
           <RelTime date={ev.event_date} />
         </div>
-        {(ev.location_text || ev.lat !== null) && (
+        {ev.location_text && (
           <div className="text-sm font-semibold opacity-95">
             📍 {ev.location_text}
-            {ev.lat !== null && ev.lng !== null && (
-              <a
-                href={`https://www.openstreetmap.org/?mlat=${ev.lat}&mlon=${ev.lng}#map=15/${ev.lat}/${ev.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="underline ml-2 font-bold"
-              >
-                Voir sur la carte ↗
-              </a>
-            )}
           </div>
         )}
         <div className="mt-2 flex gap-2 flex-wrap">
@@ -282,6 +273,14 @@ export default async function EvenementDetailPage(props: {
           )}
         </div>
       </div>
+
+      {(ev.location_text || (ev.lat !== null && ev.lng !== null)) && (
+        <LocationActions
+          lat={ev.lat}
+          lng={ev.lng}
+          text={ev.location_text}
+        />
+      )}
 
       {isOrganizer && <OwnerActions eventId={ev.id} />}
 

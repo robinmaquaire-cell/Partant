@@ -293,22 +293,36 @@ export function EventForm({
         />
       </label>
 
-      <label className="block mb-3">
+      <div className="mb-3">
         <div className={label}>Catégorie (facultatif)</div>
+        <div className="flex gap-1.5 flex-wrap mb-2">
+          {[...new Set([...EVENT_CATEGORIES, ...categories])].map((c) => {
+            const on = category.trim().toLowerCase() === c.toLowerCase();
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(on ? "" : c)}
+                className={`px-3 py-1.5 rounded-full text-sm font-bold border-[1.5px] transition-colors ${
+                  on
+                    ? "bg-ink text-paper border-ink"
+                    : "text-ink-soft border-line"
+                }`}
+              >
+                {on ? "✓ " : ""}
+                {c}
+              </button>
+            );
+          })}
+        </div>
         <input
           className={input}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
-          list="categories-evenement"
           maxLength={30}
-          placeholder="ex. Sport, Apéro, Culture…"
+          placeholder="…ou tape la tienne"
         />
-        <datalist id="categories-evenement">
-          {[...new Set([...categories, ...EVENT_CATEGORIES])].map((c) => (
-            <option key={c} value={c} />
-          ))}
-        </datalist>
-      </label>
+      </div>
 
       <label className="block mb-3">
         <div className={label}>Description</div>
