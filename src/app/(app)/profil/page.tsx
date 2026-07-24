@@ -6,6 +6,7 @@ import { AvatarUpload } from "./avatar-upload";
 import { PasswordSection } from "./password-section";
 import { PushSection } from "./push-section";
 import { DeleteAccount } from "./delete-account";
+import { isAdminEmail } from "@/lib/admin";
 import Link from "next/link";
 
 type TemplateRow = {
@@ -71,6 +72,19 @@ export default async function ProfilPage(props: {
           location: t.payload?.location_text ?? "",
         }))}
       />
+      {isAdminEmail(user.email) && (
+        <Link
+          href="/admin"
+          className="block rounded-2xl p-4 mb-4 bg-card border-[1.5px] border-line"
+        >
+          <div className="font-extrabold font-display">🛠 Retours des utilisateurs</div>
+          <p className="text-sm text-ink-soft">
+            Lire les avis, vocaux et captures envoyés via le bouton « Mon avis ».
+            Réservé à toi.
+          </p>
+        </Link>
+      )}
+
       <DeleteAccount />
       <p className="text-xs text-center mt-6 mb-2 text-ink-soft">
         <Link href="/conditions" className="underline">
