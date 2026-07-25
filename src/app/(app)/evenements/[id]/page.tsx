@@ -53,36 +53,42 @@ export default async function EvenementDetailPage(props: {
 }) {
   const { id } = await props.params;
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) redirect("/connexion");
 
-  const { data } = await supabase
-    .from("events")
-    .select(
-      `id, title, description, event_date, event_time, location_text, lat, lng,
-       max_participants, collaborative, category, created_by,
-       event_lists(lists(id, name, color)),
-       event_organizers(user_id),
-       rsvps(user_id, status),
-       equipment_items(id, name, kind, qty, category, added_by,
-         equipment_contributions(user_id, qty),
-         equipment_confirmations(user_id)),
-       event_roles(id, name, capacity, created_at, event_role_takers(user_id))`
-    )
-    .eq("id", id)
-    .maybeSingle();
+  // Ces trois lectures ne dépendent que de l'identifiant : on les lance
+  // ensemble plutôt que l'une après l'autre, pour réduire la latence.
+  const [
+    {
+      data: { user },
+    },
+    { data },
+    { data: messageRows },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase
+      .from("events")
+      .select(
+        `id, title, description, event_date, event_time, location_text, lat, lng,
+         max_participants, collaborative, category, created_by,
+         event_lists(lists(id, name, color)),
+         event_organizers(user_id),
+         rsvps(user_id, status),
+         equipment_items(id, name, kind, qty, category, added_by,
+           equipment_contributions(user_id, qty),
+           equipment_confirmations(user_id)),
+         event_roles(id, name, capacity, created_at, event_role_takers(user_id))`
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("event_messages")
+      .select("id, user_id, body, created_at")
+      .eq("event_id", id)
+      .order("created_at", { ascending: true })
+      .limit(300),
+  ]);
+  if (!user) redirect("/connexion");
   if (!data) notFound();
   const ev = data as unknown as EventRow;
-
-  // La discussion de l'événement, du plus ancien au plus récent.
-  const { data: messageRows } = await supabase
-    .from("event_messages")
-    .select("id, user_id, body, created_at")
-    .eq("event_id", id)
-    .order("created_at", { ascending: true })
-    .limit(300);
   const messages = (messageRows ?? []) as {
     id: string;
     user_id: string;
@@ -103,27 +109,7 @@ export default async function EvenementDetailPage(props: {
   (ev.event_roles ?? []).forEach((r) =>
     r.event_role_takers.forEach((t) => userIds.add(t.user_id))
   );
-  const { data: profiles } = await supabase
-    .from("profiles")
-    .select("id, pseudo, avatar_url")
-    .in("id", [...userIds]);
-  const profileOf = new Map(
-    (profiles ?? []).map((p) => [
-      p.id,
-      { pseudo: p.pseudo || "(sans pseudo)", avatarUrl: p.avatar_url ?? null },
-    ])
-  );
-  const pseudoOf = new Map(
-    [...profileOf].map(([id, p]) => [id, p.pseudo])
-  );
-  const nameOf = (uid: string) =>
-    uid === user.id ? "toi" : pseudoOf.get(uid) || "?";
-  const personOf = (uid: string) => ({
-    userId: uid,
-    pseudo: pseudoOf.get(uid) || "?",
-    avatarUrl: profileOf.get(uid)?.avatarUrl ?? null,
-  });
-
+  // Ce qui se déduit de l'événement sans nouvelle requête.
   const lists = ev.event_lists
     .map((el) => el.lists)
     .filter((l): l is NonNullable<typeof l> => l !== null);
@@ -134,38 +120,53 @@ export default async function EvenementDetailPage(props: {
   const myStatus = ev.rsvps.find((r) => r.user_id === user.id)?.status ?? null;
   const isOrganizer = organizerIds.has(user.id);
 
-  // Le lien de partage : les organisateurs le créent à la première ouverture,
-  // les autres partagent celui qui existe déjà.
-  let shareToken: string | null = null;
-  if (isOrganizer) {
-    const { data: token } = await supabase.rpc("get_event_share_token", {
-      p_event: ev.id,
-    });
-    shareToken = (token as string) ?? null;
-  } else {
-    const { data: invite } = await supabase
-      .from("event_invites")
-      .select("token")
-      .eq("event_id", ev.id)
-      .eq("revoked", false)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    shareToken = invite?.token ?? null;
-  }
+  // Trois lectures indépendantes, lancées en parallèle : les profils, le
+  // lien de partage, et les personnes « hors liste ».
+  const [{ data: profiles }, shareRes, { data: outsiderRows }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("id, pseudo, avatar_url")
+        .in("id", [...userIds]),
+      isOrganizer
+        ? supabase.rpc("get_event_share_token", { p_event: ev.id })
+        : supabase
+            .from("event_invites")
+            .select("token")
+            .eq("event_id", ev.id)
+            .eq("revoked", false)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+      lists.length > 0
+        ? supabase.rpc("event_outsiders", { p_event: ev.id })
+        : Promise.resolve({ data: [] as { user_id: string }[] }),
+    ]);
 
-  // Les personnes arrivées par le lien de partage, membres d'aucune des
-  // listes de l'événement. (Sans liste, tout le monde est dans ce cas :
-  // on l'indique une seule fois en haut plutôt que sur chaque personne.)
-  const outsiders = new Set<string>();
-  if (lists.length > 0) {
-    const { data: rows } = await supabase.rpc("event_outsiders", {
-      p_event: ev.id,
-    });
-    ((rows ?? []) as { user_id: string }[]).forEach((r) =>
-      outsiders.add(r.user_id)
-    );
-  }
+  const profileOf = new Map(
+    (profiles ?? []).map((p) => [
+      p.id,
+      { pseudo: p.pseudo || "(sans pseudo)", avatarUrl: p.avatar_url ?? null },
+    ])
+  );
+  const pseudoOf = new Map([...profileOf].map(([id, p]) => [id, p.pseudo]));
+  const nameOf = (uid: string) =>
+    uid === user.id ? "toi" : pseudoOf.get(uid) || "?";
+  const personOf = (uid: string) => ({
+    userId: uid,
+    pseudo: pseudoOf.get(uid) || "?",
+    avatarUrl: profileOf.get(uid)?.avatarUrl ?? null,
+  });
+
+  // Le lien de partage : les organisateurs le créent à la première ouverture,
+  // les autres réutilisent celui qui existe déjà.
+  const shareToken: string | null = isOrganizer
+    ? ((shareRes.data as string | null) ?? null)
+    : ((shareRes.data as { token: string } | null)?.token ?? null);
+
+  const outsiders = new Set<string>(
+    ((outsiderRows ?? []) as { user_id: string }[]).map((r) => r.user_id)
+  );
 
   const longDate = new Date(ev.event_date + "T00:00").toLocaleDateString(
     "fr-FR",
