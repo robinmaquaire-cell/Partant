@@ -61,6 +61,12 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
 
   return (
     <div className="pb-8">
+      <Link
+        href="/listes"
+        className="inline-block text-sm font-bold mb-3 text-ink-soft"
+      >
+        ← Mes listes
+      </Link>
       <h2 className="text-xl font-extrabold mb-1 font-display">Mes contacts</h2>
       <p className="text-sm mb-4 text-ink-soft">
         Les gens croisés dans tes listes et tes événements, plus ceux que tu

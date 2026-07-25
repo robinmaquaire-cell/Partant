@@ -20,7 +20,7 @@ export default async function ListesPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-3">
         <h2 className="text-xl font-extrabold font-display">Mes listes</h2>
         <Link
           href="/listes/nouvelle"
@@ -29,6 +29,20 @@ export default async function ListesPage() {
           + Liste
         </Link>
       </div>
+
+      <Link
+        href="/contacts"
+        className="flex items-center gap-3 rounded-2xl p-3 mb-4 bg-card border-[1.5px] border-line"
+      >
+        <span className="text-xl leading-none">🤝</span>
+        <div className="flex-1">
+          <div className="font-bold text-sm">Mes contacts</div>
+          <div className="text-xs text-ink-soft">
+            Les gens croisés dans tes listes et événements
+          </div>
+        </div>
+        <span className="text-ink-soft">›</span>
+      </Link>
 
       {lists.length === 0 && (
         <div className="text-center py-12 text-ink-soft">
