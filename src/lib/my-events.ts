@@ -10,6 +10,8 @@ type EventRow = {
   location_text: string;
   max_participants: number;
   category: string | null;
+  lat: number | null;
+  lng: number | null;
   created_by: string;
   event_lists: {
     lists: {
@@ -34,7 +36,7 @@ export async function fetchMyEvents(
     supabase
       .from("events")
       .select(
-        "id, title, event_date, event_time, location_text, max_participants, category, created_by, event_lists(lists(id, name, color, emoji, logo_url)), rsvps(user_id, status)"
+        "id, title, event_date, event_time, location_text, max_participants, category, lat, lng, created_by, event_lists(lists(id, name, color, emoji, logo_url)), rsvps(user_id, status)"
       )
       .order("event_date", { ascending: true })
       .order("event_time", { ascending: true }),
@@ -62,6 +64,8 @@ export async function fetchMyEvents(
     location_text: ev.location_text,
     max_participants: ev.max_participants,
     category: ev.category,
+    lat: ev.lat,
+    lng: ev.lng,
     lists: ev.event_lists
       .map((el) => el.lists)
       .filter((l): l is NonNullable<typeof l> => l !== null)

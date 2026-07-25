@@ -11,6 +11,8 @@ export type EventCardData = {
   location_text: string;
   max_participants: number;
   category: string | null;
+  lat: number | null;
+  lng: number | null;
   lists: {
     id: string;
     name: string;

@@ -2,7 +2,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fetchMyEvents } from "@/lib/my-events";
-import { CalendarView } from "@/components/calendar-view";
+import { MyCalendar } from "./my-calendar";
 import { ShareCard } from "./share-card";
 import { SyncRules, type CalendarList } from "./sync-rules";
 import { EventSyncList, type SyncEvent } from "./event-sync-list";
@@ -117,11 +117,10 @@ export default async function CalendrierPage() {
         Mon calendrier
       </h2>
       <p className="text-sm mb-4 text-ink-soft">
-        Tout ce qui t&apos;arrive sur Partants ?, et ce que tu envoies vers ton
-        agenda habituel.
+        Tout ce qui t&apos;arrive sur Partants ?, en calendrier ou sur la carte.
       </p>
 
-      <CalendarView events={mine} />
+      <MyCalendar events={mine} />
 
       <h2 className="text-xl font-extrabold mt-8 mb-1 font-display">
         Calendrier synchronisé
