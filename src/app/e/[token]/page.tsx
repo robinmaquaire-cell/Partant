@@ -75,8 +75,9 @@ export default async function PartageEvenementPage(props: {
               </div>
             )}
             <div className="text-sm mt-1 opacity-90">
-              {invite.yes_count}/{invite.max_participants} partant
-              {invite.yes_count > 1 ? "s" : ""}
+              {invite.yes_count}
+              {invite.max_participants > 0 ? `/${invite.max_participants}` : ""}{" "}
+              partant{invite.yes_count > 1 ? "s" : ""}
             </div>
           </div>
 

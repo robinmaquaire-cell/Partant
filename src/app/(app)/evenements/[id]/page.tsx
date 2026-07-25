@@ -308,7 +308,8 @@ export default async function EvenementDetailPage(props: {
       />
 
       <h3 className="font-extrabold mb-2 font-display">
-        Partants — {yesList.length}/{ev.max_participants}
+        Partants — {yesList.length}
+        {ev.max_participants > 0 ? `/${ev.max_participants}` : ""}
       </h3>
       <div className="flex flex-wrap gap-2 mb-6">
         {partants.map((r) => {
@@ -352,7 +353,11 @@ export default async function EvenementDetailPage(props: {
       <RsvpBar
         eventId={ev.id}
         myStatus={myStatus}
-        full={yesList.length >= ev.max_participants && myStatus !== "yes"}
+        full={
+          ev.max_participants > 0 &&
+          yesList.length >= ev.max_participants &&
+          myStatus !== "yes"
+        }
         organizer={isOrganizer}
       />
     </div>

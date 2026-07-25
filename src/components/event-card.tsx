@@ -79,7 +79,8 @@ export function EventCard({ ev }: { ev: EventCardData }) {
           {ev.event_time.slice(0, 5)}
         </div>
         <div className="text-sm mt-1 font-semibold text-pine">
-          {ev.yesCount}/{ev.max_participants} partant
+          {ev.yesCount}
+          {ev.max_participants > 0 ? `/${ev.max_participants}` : ""} partant
           {ev.yesCount > 1 ? "s" : ""}
           {ev.myStatus === "yes" && (
             <span className="text-ok"> · Tu y seras ✓</span>

@@ -104,7 +104,7 @@ export function EventForm({
   const [gpsText, setGpsText] = useState("");
   const [gpsErr, setGpsErr] = useState("");
   const [mapOpen, setMapOpen] = useState(false);
-  const [max, setMax] = useState(init?.max ?? 10);
+  const [max, setMax] = useState(init?.max ?? 0);
   const [collaborative, setCollaborative] = useState(
     init?.collaborative ?? false
   );
@@ -157,7 +157,7 @@ export function EventForm({
     setCoords(
       p.lat != null && p.lng != null ? { lat: p.lat, lng: p.lng } : null
     );
-    setMax(p.max_participants ?? 10);
+    setMax(p.max_participants ?? 0);
     setCollaborative(p.collaborative ?? false);
     setCategory(p.category ?? "");
     setEquipment(
@@ -425,12 +425,15 @@ export function EventForm({
         <div className={label}>Nombre max de participants</div>
         <input
           type="number"
-          min={1}
+          min={0}
           max={1000}
           className={input}
           value={max}
           onChange={(e) => setMax(Number(e.target.value))}
         />
+        <p className="text-xs mt-1 text-ink-soft">
+          Laisse <strong>0</strong> pour un nombre de places illimité.
+        </p>
       </label>
 
       <div className="mb-3">

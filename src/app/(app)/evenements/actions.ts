@@ -79,8 +79,8 @@ function checkEventInput(input: EventInput): string | null {
     (Math.abs(input.lat) > 90 || Math.abs(input.lng) > 180)
   )
     return "Point GPS invalide.";
-  if (!Number.isInteger(input.max) || input.max < 1 || input.max > 1000)
-    return "Le nombre max de participants doit être entre 1 et 1000.";
+  if (!Number.isInteger(input.max) || input.max < 0 || input.max > 1000)
+    return "Le nombre max de participants doit être entre 0 (illimité) et 1000.";
   // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
   if ((input.category ?? "").trim().length > 30)
