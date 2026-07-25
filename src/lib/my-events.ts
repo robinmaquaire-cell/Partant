@@ -10,6 +10,7 @@ type EventRow = {
   location_text: string;
   max_participants: number;
   category: string | null;
+  created_by: string;
   event_lists: {
     lists: {
       id: string;
@@ -29,17 +30,31 @@ export async function fetchMyEvents(
   supabase: SupabaseClient,
   userId: string
 ): Promise<EventCardData[]> {
-  const { data } = await supabase
-    .from("events")
-    .select(
-      "id, title, event_date, event_time, location_text, max_participants, category, event_lists(lists(id, name, color, emoji, logo_url)), rsvps(user_id, status)"
-    )
-    .order("event_date", { ascending: true })
-    .order("event_time", { ascending: true });
+  const [{ data }, { data: blockedRows }] = await Promise.all([
+    supabase
+      .from("events")
+      .select(
+        "id, title, event_date, event_time, location_text, max_participants, category, created_by, event_lists(lists(id, name, color, emoji, logo_url)), rsvps(user_id, status)"
+      )
+      .order("event_date", { ascending: true })
+      .order("event_time", { ascending: true }),
+    // Les contacts dont j'ai bloqué les événements.
+    supabase
+      .from("contact_links")
+      .select("contact_id")
+      .eq("user_id", userId)
+      .eq("blocked", true),
+  ]);
+
+  const blocked = new Set(
+    ((blockedRows ?? []) as { contact_id: string }[]).map((r) => r.contact_id)
+  );
 
   const events = (data ?? []) as unknown as EventRow[];
 
-  return events.map((ev) => ({
+  return events
+    .filter((ev) => !blocked.has(ev.created_by))
+    .map((ev) => ({
     id: ev.id,
     title: ev.title,
     event_date: ev.event_date,
