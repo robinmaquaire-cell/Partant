@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { submitFeedback } from "@/app/(app)/feedback-actions";
@@ -171,13 +172,15 @@ export function FeedbackButton({ userId }: { userId: string }) {
         💬
       </button>
 
-      {open && (
-        <div
-          className="fixed inset-0 z-40 bg-black/40 flex items-end sm:items-center sm:justify-center"
-          onClick={close}
-        >
+      {open &&
+        typeof document !== "undefined" &&
+        createPortal(
           <div
-            className="w-full sm:max-w-md bg-paper rounded-t-2xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto"
+            className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center sm:justify-center"
+            onClick={close}
+          >
+          <div
+            className="w-full sm:max-w-md bg-paper rounded-t-2xl sm:rounded-2xl p-5 pb-8 max-h-[85vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between mb-1">
@@ -315,8 +318,9 @@ export function FeedbackButton({ userId }: { userId: string }) {
               </>
             )}
           </div>
-        </div>
-      )}
+        </div>,
+          document.body
+        )}
     </>
   );
 }
