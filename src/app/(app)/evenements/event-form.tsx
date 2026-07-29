@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { parseGps } from "@/lib/parse-gps";
 import { GpsMap } from "@/components/gps-map";
@@ -13,6 +14,7 @@ import {
   type EventInput,
   type RoleDraft,
 } from "./actions";
+import { draftEventFromText } from "./voice-actions";
 
 export type TemplatePayload = {
   title?: string;
@@ -75,19 +77,27 @@ const EVENT_CATEGORIES = [
 ];
 
 const label = "text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft";
+// Zone d'édition : blanc pur. Tout ce qui se tape reste blanc.
 const input =
   "w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2.5 text-[15px] text-ink outline-none focus:border-river";
+// Ligne déjà ajoutée à la liste : légèrement teintée et ombrée, pour qu'on
+// voie d'un coup d'œil ce qui est enregistré et ce qui est encore en train
+// d'être saisi.
+const savedRow =
+  "flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-pine/[0.06] border-[1.5px] border-line shadow-[0_1px_3px_rgba(16,48,44,0.12)]";
 
 export function EventForm({
   lists,
   templates = [],
   categories = [],
   edit,
+  voiceEnabled = false,
 }: {
   lists: ListOption[];
   templates?: TemplateOption[];
   categories?: string[]; // catégories déjà utilisées, en suggestion
   edit?: EditProps;
+  voiceEnabled?: boolean; // aide vocale dispo (clé Anthropic configurée)
 }) {
   const router = useRouter();
   const init = edit?.initial;
@@ -148,6 +158,46 @@ export function EventForm({
   const [err, setErr] = useState("");
   const [pending, startTransition] = useTransition();
 
+  // Aide vocale : la personne dicte (micro du clavier) ou tape une phrase,
+  // et Claude pré-remplit les champs. Réservée à la création (pas à l'édition).
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [voiceText, setVoiceText] = useState("");
+  const [voiceErr, setVoiceErr] = useState("");
+  const [voiceBusy, setVoiceBusy] = useState(false);
+
+  const runVoiceDraft = () => {
+    setVoiceErr("");
+    setVoiceBusy(true);
+    startTransition(async () => {
+      const result = await draftEventFromText(voiceText);
+      setVoiceBusy(false);
+      if (!result.ok) {
+        setVoiceErr(result.error);
+        return;
+      }
+      const d = result.draft;
+      // On ne remplit que ce qui a été compris ; le reste garde sa valeur.
+      if (d.date) setDate(d.date);
+      if (d.time) setTime(d.time);
+      if (d.title) setTitle(d.title);
+      if (d.category) setCategory(d.category);
+      if (d.description) setDescription(d.description);
+      if (d.location) setLocation(d.location);
+      setMax(d.max);
+      if (d.equipment.length) setEquipment(d.equipment);
+      if (d.roles.length) setRoles(d.roles);
+      setVoiceOpen(false);
+      setVoiceText("");
+    });
+  };
+
+  // Saisie restée en cours d'édition au moment de valider : on demande
+  // confirmation avant de l'ajouter (ou de l'abandonner).
+  const [ask, setAsk] = useState<{
+    item: EquipmentDraft | null;
+    role: RoleDraft | null;
+  } | null>(null);
+
   const applyTemplate = (t: TemplateOption) => {
     const p = t.payload;
     setTitle(p.title ?? "");
@@ -182,33 +232,60 @@ export function EventForm({
       p.includes(id) ? p.filter((l) => l !== id) : [...p, id]
     );
 
+  // L'objet en cours de saisie, tant qu'il n'a pas été ajouté à la liste.
+  const draftItem = (): EquipmentDraft | null =>
+    eqName.trim()
+      ? {
+          name: eqName.trim(),
+          kind: eqKind,
+          qty: Math.max(1, eqQty || 1),
+          category: eqCat.trim() || null,
+        }
+      : null;
+
+  // Le rôle en cours de saisie, tant qu'il n'a pas été ajouté à la liste.
+  const draftRole = (): RoleDraft | null =>
+    roleName.trim()
+      ? { name: roleName.trim(), capacity: Math.max(1, roleCap || 1) }
+      : null;
+
   const addEquipment = () => {
-    if (!eqName.trim()) return;
-    setEquipment([
-      ...equipment,
-      {
-        name: eqName.trim(),
-        kind: eqKind,
-        qty: Math.max(1, eqQty || 1),
-        category: eqCat.trim() || null,
-      },
-    ]);
+    const it = draftItem();
+    if (!it) return;
+    setEquipment([...equipment, it]);
     setEqName("");
     setEqQty(1);
     // La catégorie reste en place : on saisit souvent plusieurs objets de suite.
   };
 
   const addRole = () => {
-    if (!roleName.trim()) return;
-    setRoles([
-      ...roles,
-      { name: roleName.trim(), capacity: Math.max(1, roleCap || 1) },
-    ]);
+    const r = draftRole();
+    if (!r) return;
+    setRoles([...roles, r]);
     setRoleName("");
     setRoleCap(1);
   };
 
-  const submit = () =>
+  // Envoi réel. Les éventuelles saisies restées dans la zone d'édition sont
+  // ajoutées ou ignorées selon la réponse donnée dans l'alerte.
+  const runSubmit = (
+    extraItem: EquipmentDraft | null,
+    extraRole: RoleDraft | null
+  ) => {
+    const allEquipment = extraItem ? [...equipment, extraItem] : equipment;
+    const allRoles = extraRole ? [...roles, extraRole] : roles;
+    if (extraItem) {
+      setEquipment(allEquipment);
+      setEqName("");
+      setEqQty(1);
+    }
+    if (extraRole) {
+      setRoles(allRoles);
+      setRoleName("");
+      setRoleCap(1);
+    }
+    setAsk(null);
+
     startTransition(async () => {
       setErr("");
       const payload: EventInput = {
@@ -223,8 +300,8 @@ export function EventForm({
         collaborative,
         category: category.trim() || null,
         listIds,
-        equipment,
-        roles,
+        equipment: allEquipment,
+        roles: allRoles,
       };
       const result = edit
         ? await updateEvent(edit.eventId, payload, removed, removedRoles)
@@ -235,12 +312,84 @@ export function EventForm({
       // En cas de succès, l'action redirige : on n'arrive ici qu'en erreur.
       if (result && !result.ok) setErr(result.error);
     });
+  };
+
+  const submit = () => {
+    // Rien n'est ajouté à l'insu de la personne : s'il reste une saisie dans
+    // la zone d'édition, on demande d'abord ce qu'il faut en faire.
+    const item = draftItem();
+    const role = draftRole();
+    if (item || role) {
+      setAsk({ item, role });
+      return;
+    }
+    runSubmit(null, null);
+  };
+
+  // « les » quand deux saisies sont en attente, « l' » quand il n'y en a qu'une.
+  const askPron = ask?.item && ask?.role ? "les " : "l'";
 
   return (
     <div className="pb-8">
       <h2 className="text-xl font-extrabold mb-4 font-display">
         {edit ? "Modifier l'événement" : "Nouvel événement"}
       </h2>
+
+      {!edit && voiceEnabled && (
+        <div className="rounded-2xl p-3 mb-3 bg-pine/[0.06] border-[1.5px] border-pine/30">
+          {!voiceOpen ? (
+            <button
+              type="button"
+              onClick={() => setVoiceOpen(true)}
+              className="flex items-center gap-2 text-sm font-bold text-pine"
+            >
+              🎤 Décrire en une phrase (le formulaire se remplit tout seul)
+            </button>
+          ) : (
+            <>
+              <div className={label}>Décris ton événement</div>
+              <p className="text-xs mb-2 text-ink-soft">
+                Tape, ou touche le micro 🎤 de ton clavier et parle. Ex. : « Kayak
+                samedi prochain à 10h à la base nautique, on est max 6, chacun son
+                gilet ».
+              </p>
+              <textarea
+                className={`${input} min-h-[80px]`}
+                value={voiceText}
+                onChange={(e) => setVoiceText(e.target.value)}
+                placeholder="Dis à quoi ressemble ton événement…"
+                autoFocus
+              />
+              {voiceErr && (
+                <p className="text-xs mt-1 font-semibold text-refuse">{voiceErr}</p>
+              )}
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setVoiceOpen(false);
+                    setVoiceErr("");
+                  }}
+                  className="px-3 py-2 rounded-xl text-sm font-bold text-ink-soft border-[1.5px] border-line"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={runVoiceDraft}
+                  disabled={voiceBusy || !voiceText.trim()}
+                  className="flex-1 px-3 py-2 rounded-xl text-sm font-bold text-white bg-pine transition-transform active:scale-95 disabled:opacity-60"
+                >
+                  {voiceBusy ? "Lecture en cours…" : "✨ Pré-remplir le formulaire"}
+                </button>
+              </div>
+              <p className="text-xs mt-2 text-ink-soft">
+                Tu pourras tout relire et corriger avant de créer l&apos;événement.
+              </p>
+            </>
+          )}
+        </div>
+      )}
 
       {!edit && templates.length > 0 && (
         <div className="mb-3">
@@ -441,7 +590,7 @@ export function EventForm({
         {kept.map((it) => (
           <div
             key={it.id}
-            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+            className={savedRow}
           >
             <span>
               {it.name}{" "}
@@ -472,7 +621,7 @@ export function EventForm({
         {equipment.map((it, i) => (
           <div
             key={i}
-            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+            className={savedRow}
           >
             <span>
               {it.name}{" "}
@@ -536,6 +685,12 @@ export function EventForm({
             className={`${input} flex-1 min-w-0`}
             value={eqName}
             onChange={(e) => setEqName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addEquipment();
+              }
+            }}
             placeholder={
               eqKind === "indiv" ? "ex. Gilet de sauvetage" : "ex. Bidon étanche"
             }
@@ -547,6 +702,12 @@ export function EventForm({
             className="w-16 shrink-0 text-center bg-card border-[1.5px] border-line rounded-xl px-2 py-2.5 text-[15px] text-ink outline-none focus:border-river"
             value={eqQty}
             onChange={(e) => setEqQty(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addEquipment();
+              }
+            }}
             aria-label={
               eqKind === "indiv" ? "Quantité par personne" : "Quantité totale"
             }
@@ -554,11 +715,17 @@ export function EventForm({
           <button
             type="button"
             onClick={addEquipment}
-            className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
+            className="px-3 py-2.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
           >
-            +
+            Ajouter
           </button>
         </div>
+        {eqName.trim() && (
+          <p className="text-xs mt-1 font-semibold text-signal">
+            ↑ « {eqName.trim()} » n&apos;est pas encore ajouté — appuie sur
+            « Ajouter » pour l&apos;enregistrer dans la liste.
+          </p>
+        )}
       </div>
 
       <div className="mb-3">
@@ -571,7 +738,7 @@ export function EventForm({
         {keptRoles.map((r) => (
           <div
             key={r.id}
-            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+            className={savedRow}
           >
             <span>
               {r.name}{" "}
@@ -595,7 +762,7 @@ export function EventForm({
         {roles.map((r, i) => (
           <div
             key={i}
-            className="flex items-center justify-between text-sm font-semibold mb-1 px-3 py-2 rounded-xl bg-card border-[1.5px] border-line"
+            className={savedRow}
           >
             <span>
               {r.name}{" "}
@@ -618,6 +785,12 @@ export function EventForm({
             className={`${input} flex-1 min-w-0`}
             value={roleName}
             onChange={(e) => setRoleName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addRole();
+              }
+            }}
             placeholder="ex. Responsable transport"
             maxLength={40}
           />
@@ -628,16 +801,28 @@ export function EventForm({
             className="w-16 shrink-0 text-center bg-card border-[1.5px] border-line rounded-xl px-2 py-2.5 text-[15px] text-ink outline-none focus:border-river"
             value={roleCap}
             onChange={(e) => setRoleCap(Number(e.target.value))}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addRole();
+              }
+            }}
             aria-label="Nombre de personnes pour ce rôle"
           />
           <button
             type="button"
             onClick={addRole}
-            className="px-3 py-1.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
+            className="px-3 py-2.5 text-sm rounded-xl font-bold bg-ink text-paper shrink-0"
           >
-            +
+            Ajouter
           </button>
         </div>
+        {roleName.trim() && (
+          <p className="text-xs mt-1 font-semibold text-signal">
+            ↑ « {roleName.trim()} » n&apos;est pas encore ajouté — appuie sur
+            « Ajouter » pour l&apos;enregistrer dans la liste.
+          </p>
+        )}
       </div>
 
       <div className="rounded-2xl p-3 mb-3 bg-card border-[1.5px] border-line">
@@ -746,6 +931,70 @@ export function EventForm({
               : "Créer l'événement"}
         </button>
       </div>
+
+      {ask &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center sm:justify-center"
+            onClick={() => setAsk(null)}
+          >
+            <div
+              className="w-full sm:max-w-md bg-paper rounded-t-2xl sm:rounded-2xl p-5 pb-8"
+              onClick={(e) => e.stopPropagation()}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="titre-alerte-saisie"
+            >
+              <h3
+                id="titre-alerte-saisie"
+                className="text-lg font-extrabold mb-2 font-display text-signal"
+              >
+                ⚠️ Attention
+              </h3>
+              <p className="text-[15px] leading-relaxed mb-4">
+                Tu as commencé à ajouter{" "}
+                {ask.item && (
+                  <>
+                    le matériel <strong>« {ask.item.name} »</strong>
+                  </>
+                )}
+                {ask.item && ask.role && " et "}
+                {ask.role && (
+                  <>
+                    le rôle <strong>« {ask.role.name} »</strong>
+                  </>
+                )}{" "}
+                sans {askPron}enregistrer. Veux-tu tout de même {askPron}
+                ajouter ?
+              </p>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => runSubmit(ask.item, ask.role)}
+                  className="w-full px-4 py-2.5 rounded-xl font-bold text-white bg-signal transition-transform active:scale-95"
+                >
+                  Oui, {askPron}ajouter
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runSubmit(null, null)}
+                  className="w-full px-4 py-2.5 rounded-xl font-bold text-ink-soft bg-card border-[1.5px] border-line"
+                >
+                  Non, continuer sans
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAsk(null)}
+                  className="w-full py-1.5 text-sm font-bold text-ink-soft"
+                >
+                  ← Revenir au formulaire
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }

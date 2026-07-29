@@ -23,6 +23,9 @@ export default async function NouvelEvenementPage() {
 
   return (
     <EventForm
+      // L'aide vocale n'apparaît que si la clé Anthropic est configurée
+      // (sinon le bouton mènerait à un cul-de-sac). Voir voice-actions.ts.
+      voiceEnabled={!!process.env.ANTHROPIC_API_KEY}
       lists={listOptionsFrom((lists ?? []) as MyListRow[])}
       categories={[
         ...new Set(
