@@ -17,8 +17,8 @@ export default async function NouvelEvenementPage() {
         .from("templates")
         .select("id, name, payload")
         .order("created_at", { ascending: true }),
-      // Les catégories déjà utilisées, proposées en suggestion.
-      supabase.from("events").select("category").not("category", "is", null),
+      // Les tags déjà utilisés, proposés en suggestion.
+      supabase.from("events").select("tags"),
       // Mes contacts, pour vérifier leurs disponibilités (hors bloqués).
       supabase.rpc("my_contacts"),
     ]);
@@ -43,10 +43,11 @@ export default async function NouvelEvenementPage() {
           avatarUrl: c.avatar_url,
         }))}
       lists={listOptionsFrom((lists ?? []) as MyListRow[])}
-      categories={[
+      usedTags={[
         ...new Set(
-          ((cats ?? []) as { category: string | null }[])
-            .map((c) => (c.category ?? "").trim())
+          ((cats ?? []) as { tags: string[] | null }[])
+            .flatMap((c) => c.tags ?? [])
+            .map((t) => t.trim())
             .filter(Boolean)
         ),
       ].sort((a, b) => a.localeCompare(b, "fr"))}

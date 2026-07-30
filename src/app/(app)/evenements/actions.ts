@@ -35,7 +35,7 @@ export type EventInput = {
   lng: number | null;
   max: number;
   collaborative: boolean;
-  category: string | null;
+  tags: string[];
   listIds: string[];
   equipment: EquipmentDraft[];
   roles: RoleDraft[];
@@ -83,8 +83,10 @@ function checkEventInput(input: EventInput): string | null {
     return "Le nombre max de participants doit être entre 0 (illimité) et 1000.";
   // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
-  if ((input.category ?? "").trim().length > 30)
-    return "Le nom de catégorie est trop long (30 caractères max).";
+  if (input.tags.length > 8)
+    return "Pas plus de 8 tags par événement.";
+  if (input.tags.some((t) => t.trim().length > 30))
+    return "Un tag est trop long (30 caractères max).";
   for (const it of input.equipment) {
     if (!it.name.trim() || it.name.trim().length > 60)
       return "Chaque objet de matériel doit avoir un nom (60 caractères max).";
@@ -118,6 +120,22 @@ function rolesJson(roles: RoleDraft[]) {
   return roles.map((r) => ({ name: r.name.trim(), capacity: r.capacity }));
 }
 
+// Tags nettoyés : espaces retirés, vides ignorés, doublons fusionnés (casse
+// ignorée). Le SQL renettoie de toute façon.
+function cleanTags(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const t = raw.trim();
+    const key = t.toLowerCase();
+    if (t && !seen.has(key)) {
+      seen.add(key);
+      out.push(t);
+    }
+  }
+  return out;
+}
+
 export async function createEvent(
   input: EventInput,
   templateName: string | null
@@ -143,7 +161,7 @@ export async function createEvent(
     p_list_ids: input.listIds,
     p_equipment: equipmentJson(input.equipment),
     p_roles: rolesJson(input.roles),
-    p_category: (input.category ?? "").trim() || null,
+    p_tags: cleanTags(input.tags),
     p_template_name: templateName ? templateName.trim() : null,
   });
 
@@ -197,7 +215,7 @@ export async function updateEvent(
     p_equipment_removed: equipmentRemoved,
     p_roles_new: rolesJson(input.roles),
     p_roles_removed: rolesRemoved,
-    p_category: (input.category ?? "").trim() || null,
+    p_tags: cleanTags(input.tags),
   });
 
   if (error)

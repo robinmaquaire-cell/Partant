@@ -29,7 +29,8 @@ export type TemplatePayload = {
   lng?: number | null;
   max_participants?: number;
   collaborative?: boolean;
-  category?: string | null;
+  category?: string | null; // ancien format (un seul tag) — repris si présent
+  tags?: string[];
   equipment?: EquipmentDraft[];
   roles?: RoleDraft[];
 };
@@ -63,15 +64,15 @@ type EditProps = {
     lng: number | null;
     max: number;
     collaborative: boolean;
-    category: string;
+    tags: string[];
     listIds: string[];
   };
   existingEquipment: ExistingItem[];
   existingRoles: ExistingRole[];
 };
 
-// Suggestions de catégories d'événement (l'organisateur peut taper la sienne).
-const EVENT_CATEGORIES = [
+// Suggestions de tags d'événement (l'organisateur peut taper les siens).
+const EVENT_TAGS = [
   "Sport",
   "Apéro",
   "Repas",
@@ -93,14 +94,14 @@ const savedRow =
 export function EventForm({
   lists,
   templates = [],
-  categories = [],
+  usedTags = [],
   edit,
   voiceEnabled = false,
   contacts = [],
 }: {
   lists: ListOption[];
   templates?: TemplateOption[];
-  categories?: string[]; // catégories déjà utilisées, en suggestion
+  usedTags?: string[]; // tags déjà utilisés ailleurs, en suggestion
   edit?: EditProps;
   voiceEnabled?: boolean; // aide vocale dispo (clé Anthropic configurée)
   contacts?: ContactOption[]; // pour vérifier leurs disponibilités
@@ -124,8 +125,27 @@ export function EventForm({
   const [collaborative, setCollaborative] = useState(
     init?.collaborative ?? false
   );
-  const [category, setCategory] = useState(init?.category ?? "");
+  const [tags, setTags] = useState<string[]>(init?.tags ?? []);
+  const [tagInput, setTagInput] = useState("");
   const [listIds, setListIds] = useState<string[]>(init?.listIds ?? []);
+
+  // Ajoute/retire un tag (casse et espaces ignorés pour comparer).
+  const toggleTag = (raw: string) => {
+    const t = raw.trim();
+    if (!t) return;
+    setTags((prev) => {
+      const key = t.toLowerCase();
+      if (prev.some((x) => x.toLowerCase() === key))
+        return prev.filter((x) => x.toLowerCase() !== key);
+      if (prev.length >= 8) return prev;
+      return [...prev, t];
+    });
+  };
+  const addTypedTag = () => {
+    if (!tagInput.trim()) return;
+    toggleTag(tagInput);
+    setTagInput("");
+  };
 
   // Matériel : objets déjà en base (mode édition) + nouveaux objets.
   const [kept, setKept] = useState<ExistingItem[]>(edit?.existingEquipment ?? []);
@@ -186,7 +206,7 @@ export function EventForm({
       if (d.date) setDate(d.date);
       if (d.time) setTime(d.time);
       if (d.title) setTitle(d.title);
-      if (d.category) setCategory(d.category);
+      if (d.tags.length) setTags(d.tags);
       if (d.description) setDescription(d.description);
       if (d.location) setLocation(d.location);
       setMax(d.max);
@@ -215,7 +235,14 @@ export function EventForm({
     );
     setMax(p.max_participants ?? 0);
     setCollaborative(p.collaborative ?? false);
-    setCategory(p.category ?? "");
+    // Nouveau format (tags) ou ancien (une catégorie unique).
+    setTags(
+      p.tags && p.tags.length
+        ? p.tags
+        : p.category
+          ? [p.category]
+          : []
+    );
     setEquipment(
       (p.equipment ?? []).map((e) => ({
         name: e.name,
@@ -304,7 +331,7 @@ export function EventForm({
         lng: coords?.lng ?? null,
         max,
         collaborative,
-        category: category.trim() || null,
+        tags,
         listIds,
         equipment: allEquipment,
         roles: allRoles,
@@ -449,34 +476,53 @@ export function EventForm({
       </label>
 
       <div className="mb-3">
-        <div className={label}>Catégorie (facultatif)</div>
+        <div className={label}>Tags (facultatif)</div>
+        {tags.length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-2">
+            {tags.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => toggleTag(t)}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-bold bg-ink text-paper"
+              >
+                🏷 {t} <span className="opacity-70">✕</span>
+              </button>
+            ))}
+          </div>
+        )}
         <div className="flex gap-1.5 flex-wrap mb-2">
-          {[...new Set([...EVENT_CATEGORIES, ...categories])].map((c) => {
-            const on = category.trim().toLowerCase() === c.toLowerCase();
-            return (
+          {[...new Set([...EVENT_TAGS, ...usedTags])]
+            .filter((c) => !tags.some((t) => t.toLowerCase() === c.toLowerCase()))
+            .map((c) => (
               <button
                 key={c}
                 type="button"
-                onClick={() => setCategory(on ? "" : c)}
-                className={`px-3 py-1.5 rounded-full text-sm font-bold border-[1.5px] transition-colors ${
-                  on
-                    ? "bg-ink text-paper border-ink"
-                    : "text-ink-soft border-line"
-                }`}
+                onClick={() => toggleTag(c)}
+                disabled={tags.length >= 8}
+                className="px-3 py-1.5 rounded-full text-sm font-bold border-[1.5px] text-ink-soft border-line disabled:opacity-50"
               >
-                {on ? "✓ " : ""}
-                {c}
+                + {c}
               </button>
-            );
-          })}
+            ))}
         </div>
         <input
           className={input}
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
+          value={tagInput}
+          onChange={(e) => setTagInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addTypedTag();
+            }
+          }}
+          onBlur={addTypedTag}
           maxLength={30}
-          placeholder="…ou tape la tienne"
+          placeholder="…ou tape le tien puis Entrée"
         />
+        {tags.length >= 8 && (
+          <p className="text-xs mt-1 text-ink-soft">Maximum 8 tags.</p>
+        )}
       </div>
 
       <label className="block mb-3">

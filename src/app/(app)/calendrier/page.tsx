@@ -80,7 +80,7 @@ export default async function CalendrierPage() {
 
   const categories = [
     ...new Set(
-      events.map((e) => (e.category ?? "").trim()).filter(Boolean)
+      events.flatMap((e) => e.tags).map((t) => t.trim()).filter(Boolean)
     ),
   ].sort((a, b) => a.localeCompare(b, "fr"));
 
@@ -101,7 +101,7 @@ export default async function CalendrierPage() {
         date: e.event_date,
         time: e.event_time,
         listNames: e.lists.map((l) => l.name).join(", "),
-        category: e.category,
+        tags: e.tags,
         myStatus: e.myStatus,
         synced: row?.synced ?? false,
         ruleOk: row?.rule_ok ?? false,

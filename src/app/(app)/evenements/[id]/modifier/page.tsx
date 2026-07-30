@@ -27,7 +27,7 @@ export default async function ModifierEvenementPage(props: {
   const { data: ev } = await supabase
     .from("events")
     .select(
-      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, category, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, category, added_by), event_roles(id, name, capacity)"
+      "id, title, description, event_date, event_time, location_text, lat, lng, max_participants, collaborative, tags, created_by, event_lists(list_id), event_organizers(user_id), equipment_items(id, name, kind, qty, category, added_by), event_roles(id, name, capacity)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -40,17 +40,18 @@ export default async function ModifierEvenementPage(props: {
 
   const [{ data: lists }, { data: cats }] = await Promise.all([
     supabase.rpc("my_lists"),
-    supabase.from("events").select("category").not("category", "is", null),
+    supabase.from("events").select("tags"),
   ]);
   const equipment = (ev.equipment_items ?? []) as EquipmentRow[];
 
   return (
     <EventForm
       lists={listOptionsFrom((lists ?? []) as MyListRow[])}
-      categories={[
+      usedTags={[
         ...new Set(
-          ((cats ?? []) as { category: string | null }[])
-            .map((c) => (c.category ?? "").trim())
+          ((cats ?? []) as { tags: string[] | null }[])
+            .flatMap((c) => c.tags ?? [])
+            .map((t) => t.trim())
             .filter(Boolean)
         ),
       ].sort((a, b) => a.localeCompare(b, "fr"))}
@@ -66,7 +67,7 @@ export default async function ModifierEvenementPage(props: {
           lng: ev.lng,
           max: ev.max_participants,
           collaborative: ev.collaborative,
-          category: ev.category ?? "",
+          tags: ev.tags ?? [],
           listIds: (ev.event_lists ?? []).map(
             (el: { list_id: string }) => el.list_id
           ),

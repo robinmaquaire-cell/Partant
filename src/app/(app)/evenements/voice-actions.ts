@@ -10,7 +10,7 @@ export type VoiceDraft = {
   date: string | null; // AAAA-MM-JJ
   time: string | null; // HH:MM
   title: string;
-  category: string | null;
+  tags: string[];
   description: string;
   location: string | null;
   max: number; // 0 = illimité
@@ -41,10 +41,11 @@ const SCHEMA = {
       description:
         "Titre court de l'événement (ex. « Sortie kayak »). Jamais vide : déduis-en un si besoin.",
     },
-    category: {
-      type: ["string", "null"],
+    tags: {
+      type: "array",
       description:
-        "Une seule catégorie parmi Sport, Apéro, Repas, Culture, Week-end, Réunion, ou null.",
+        "Un ou plusieurs mots-clés qui décrivent l'événement (ex. Sport, Apéro, Repas, Culture, Week-end, Réunion, ou d'autres). Tableau vide si rien de pertinent.",
+      items: { type: "string" },
     },
     description: {
       type: "string",
@@ -101,7 +102,7 @@ const SCHEMA = {
     "date",
     "time",
     "title",
-    "category",
+    "tags",
     "description",
     "location",
     "max_participants",
@@ -196,7 +197,7 @@ export async function draftEventFromText(text: string): Promise<Result> {
     date: string | null;
     time: string | null;
     title: string;
-    category: string | null;
+    tags: string[];
     description: string;
     location: string | null;
     max_participants: number;
@@ -245,13 +246,25 @@ export async function draftEventFromText(text: string): Promise<Result> {
   const date = DATE_RE.test(str(parsed.date)) ? str(parsed.date) : null;
   const time = TIME_RE.test(str(parsed.time)) ? str(parsed.time) : null;
 
+  // Tags : nettoyés, dédoublonnés (casse ignorée), 8 max, 30 caractères max.
+  const seenTags = new Set<string>();
+  const tags = (Array.isArray(parsed.tags) ? parsed.tags : [])
+    .map((t) => str(t).slice(0, 30))
+    .filter((t) => {
+      const k = t.toLowerCase();
+      if (!t || seenTags.has(k)) return false;
+      seenTags.add(k);
+      return true;
+    })
+    .slice(0, 8);
+
   return {
     ok: true,
     draft: {
       date,
       time,
       title: str(parsed.title).slice(0, 120),
-      category: strOrNull(parsed.category)?.slice(0, 30) ?? null,
+      tags,
       description: str(parsed.description).slice(0, 2000),
       location: strOrNull(parsed.location)?.slice(0, 200) ?? null,
       max: clampInt(parsed.max_participants, 0, 1000, 0),

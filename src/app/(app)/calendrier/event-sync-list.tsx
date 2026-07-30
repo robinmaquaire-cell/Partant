@@ -10,7 +10,7 @@ export type SyncEvent = {
   date: string;
   time: string;
   listNames: string;
-  category: string | null;
+  tags: string[];
   myStatus: "yes" | "no" | null;
   synced: boolean;
   ruleOk: boolean;
@@ -78,7 +78,7 @@ export function EventSyncList({ events }: { events: SyncEvent[] }) {
               })}{" "}
               · {ev.time.slice(0, 5)}
               {ev.listNames ? ` · ${ev.listNames}` : " · 🔗 sur invitation"}
-              {ev.category ? ` · 🏷 ${ev.category}` : ""}
+              {ev.tags.length ? ` · 🏷 ${ev.tags.join(", ")}` : ""}
               {ev.myStatus === "no" ? " · Pas dispo" : ""}
             </div>
           </div>

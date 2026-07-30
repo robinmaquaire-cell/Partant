@@ -10,7 +10,7 @@ export type EventCardData = {
   event_time: string;
   location_text: string;
   max_participants: number;
-  category: string | null;
+  tags: string[];
   lat: number | null;
   lng: number | null;
   lists: {
@@ -62,11 +62,14 @@ export function EventCard({ ev }: { ev: EventCardData }) {
               {l.name}
             </span>
           ))}
-          {ev.category && (
-            <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine">
-              🏷 {ev.category}
+          {ev.tags.map((t) => (
+            <span
+              key={t}
+              className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine"
+            >
+              🏷 {t}
             </span>
-          )}
+          ))}
           {ev.lists.length === 0 && (
             <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-sand text-pine">
               🔗 Sur invitation
