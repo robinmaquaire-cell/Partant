@@ -10,7 +10,7 @@ export default async function NouvelEvenementPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const [{ data: lists }, { data: templates }, { data: cats }] =
+  const [{ data: lists }, { data: templates }, { data: cats }, { data: contacts }] =
     await Promise.all([
       supabase.rpc("my_lists"),
       supabase
@@ -19,6 +19,8 @@ export default async function NouvelEvenementPage() {
         .order("created_at", { ascending: true }),
       // Les catégories déjà utilisées, proposées en suggestion.
       supabase.from("events").select("category").not("category", "is", null),
+      // Mes contacts, pour vérifier leurs disponibilités (hors bloqués).
+      supabase.rpc("my_contacts"),
     ]);
 
   return (
@@ -26,6 +28,20 @@ export default async function NouvelEvenementPage() {
       // L'aide vocale n'apparaît que si la clé Anthropic est configurée
       // (sinon le bouton mènerait à un cul-de-sac). Voir voice-actions.ts.
       voiceEnabled={!!process.env.ANTHROPIC_API_KEY}
+      contacts={(
+        (contacts ?? []) as {
+          contact_id: string;
+          pseudo: string | null;
+          avatar_url: string | null;
+          blocked: boolean;
+        }[]
+      )
+        .filter((c) => !c.blocked)
+        .map((c) => ({
+          id: c.contact_id,
+          pseudo: c.pseudo || "(sans pseudo)",
+          avatarUrl: c.avatar_url,
+        }))}
       lists={listOptionsFrom((lists ?? []) as MyListRow[])}
       categories={[
         ...new Set(

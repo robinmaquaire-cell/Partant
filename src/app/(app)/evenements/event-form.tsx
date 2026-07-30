@@ -15,6 +15,10 @@ import {
   type RoleDraft,
 } from "./actions";
 import { draftEventFromText } from "./voice-actions";
+import {
+  ContactAvailability,
+  type ContactOption,
+} from "./contact-availability";
 
 export type TemplatePayload = {
   title?: string;
@@ -92,12 +96,14 @@ export function EventForm({
   categories = [],
   edit,
   voiceEnabled = false,
+  contacts = [],
 }: {
   lists: ListOption[];
   templates?: TemplateOption[];
   categories?: string[]; // catégories déjà utilisées, en suggestion
   edit?: EditProps;
   voiceEnabled?: boolean; // aide vocale dispo (clé Anthropic configurée)
+  contacts?: ContactOption[]; // pour vérifier leurs disponibilités
 }) {
   const router = useRouter();
   const init = edit?.initial;
@@ -859,6 +865,10 @@ export function EventForm({
             />
           )}
         </div>
+      )}
+
+      {!edit && (
+        <ContactAvailability contacts={contacts} date={date} time={time} />
       )}
 
       <div className="mb-3">
