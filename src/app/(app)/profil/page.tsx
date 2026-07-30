@@ -5,6 +5,7 @@ import { TemplatesSection } from "./templates-section";
 import { AvatarUpload } from "./avatar-upload";
 import { PasswordSection } from "./password-section";
 import { PushSection } from "./push-section";
+import { AvailabilitySection } from "./availability-section";
 import { DeleteAccount } from "./delete-account";
 import { isAdminEmail } from "@/lib/admin";
 import Link from "next/link";
@@ -25,17 +26,36 @@ export default async function ProfilPage(props: {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const [{ data: profile }, { data: templates }] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("pseudo, contact, avatar_url, email_notifications")
-      .eq("id", user.id)
-      .single(),
-    supabase
-      .from("templates")
-      .select("id, name, payload")
-      .order("created_at", { ascending: true }),
-  ]);
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const in14days = new Date(now.getTime() + 14 * 24 * 3600 * 1000).toISOString();
+  const [{ data: profile }, { data: templates }, { data: calSource }, { data: busy }] =
+    await Promise.all([
+      supabase
+        .from("profiles")
+        .select("pseudo, contact, avatar_url, email_notifications")
+        .eq("id", user.id)
+        .single(),
+      supabase
+        .from("templates")
+        .select("id, name, payload")
+        .order("created_at", { ascending: true }),
+      // Peut renvoyer une erreur silencieuse tant que la table n'existe pas
+      // (avant l'exécution du SQL 0017) : on retombe alors sur « non relié ».
+      supabase
+        .from("calendar_sources")
+        .select("ics_url, last_synced_at, last_error, busy_share")
+        .eq("user_id", user.id)
+        .maybeSingle(),
+      supabase
+        .from("busy_slots")
+        .select("starts_at, ends_at")
+        .eq("user_id", user.id)
+        .gte("ends_at", nowIso)
+        .lte("starts_at", in14days)
+        .order("starts_at")
+        .limit(300),
+    ]);
 
   return (
     <>
@@ -64,6 +84,15 @@ export default async function ProfilPage(props: {
       {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
         <PushSection vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
       )}
+      <AvailabilitySection
+        connected={!!calSource?.ics_url}
+        lastSyncedAt={calSource?.last_synced_at ?? null}
+        lastError={calSource?.last_error ?? null}
+        busyShare={calSource?.busy_share ?? true}
+        upcoming={((busy ?? []) as { starts_at: string; ends_at: string }[]).map(
+          (b) => ({ start: b.starts_at, end: b.ends_at })
+        )}
+      />
       <TemplatesSection
         templates={((templates ?? []) as TemplateRow[]).map((t) => ({
           id: t.id,
