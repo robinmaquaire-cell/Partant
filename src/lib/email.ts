@@ -10,10 +10,14 @@ export type EmailMessage = {
 const FROM = () =>
   process.env.EMAIL_FROM ?? "Partants ? <onboarding@resend.dev>";
 
+// L'adresse officielle de l'app, pour les liens dans les e-mails.
 export function appUrl(): string {
-  return (
-    process.env.NEXT_PUBLIC_APP_URL ?? "https://partants.app"
-  ).replace(/\/$/, "");
+  const configured = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  // On ignore une ancienne adresse Vercel restée dans la configuration :
+  // le domaine officiel est désormais partants.app.
+  if (!configured || configured.includes(".vercel.app"))
+    return "https://partants.app";
+  return configured;
 }
 
 export async function sendEmails(messages: EmailMessage[]): Promise<number> {

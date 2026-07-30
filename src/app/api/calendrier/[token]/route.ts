@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { appUrl } from "@/lib/email";
 
 // Flux iCalendar (.ics) personnel : c'est l'URL qu'on colle dans Google
 // Agenda / Apple Calendrier pour voir ses événements « Partant ? ».
@@ -110,7 +111,9 @@ export async function GET(
     const { data } = await supabase.rpc("calendar_feed", { p_token: token });
     const rows = (data ?? []) as FeedRow[];
 
-    const origin = new URL(request.url).origin;
+    // Les liens vers les événements pointent toujours vers le domaine
+    // officiel, même si l'agenda a été abonné via une ancienne adresse.
+    const origin = appUrl();
     const stamp = icsStamp(new Date());
 
     for (const ev of rows) {
