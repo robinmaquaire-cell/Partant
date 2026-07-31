@@ -25,7 +25,7 @@ export function ShareSection({ eventId }: { eventId: string }) {
     <div className="mb-4">
       <p className="text-xs text-ink-soft">
         🔗 Le bouton « Partager » en haut envoie un lien qui permet de
-        rejoindre l&apos;événement, même sans être dans une liste de diffusion
+        rejoindre l&apos;événement, même sans être dans un groupe
         (le compte se crée au passage).
       </p>
 

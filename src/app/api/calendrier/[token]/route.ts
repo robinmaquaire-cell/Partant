@@ -121,7 +121,7 @@ export async function GET(
       const end = new Date(start.getTime() + DEFAULT_DURATION_MIN * 60000);
       const details = [
         ev.description,
-        ev.lists_text ? `Liste : ${ev.lists_text}` : "",
+        ev.lists_text ? `Groupe : ${ev.lists_text}` : "",
         ev.my_status === "yes"
           ? "Ta réponse : Partant !"
           : "Tu n'as pas encore répondu.",

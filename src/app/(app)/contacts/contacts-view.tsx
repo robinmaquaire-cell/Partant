@@ -53,7 +53,7 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
 
   const source = (c: Contact) => {
     const tags: string[] = [];
-    if (c.viaList) tags.push("Liste");
+    if (c.viaList) tags.push("Groupe");
     if (c.viaEvent) tags.push("Événement");
     if (c.manual && tags.length === 0) tags.push("Ajouté");
     return tags;
@@ -61,15 +61,8 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
 
   return (
     <div className="pb-8">
-      <Link
-        href="/listes"
-        className="inline-block text-sm font-bold mb-3 text-ink-soft"
-      >
-        ← Mes listes
-      </Link>
-      <h2 className="text-xl font-extrabold mb-1 font-display">Mes contacts</h2>
       <p className="text-sm mb-4 text-ink-soft">
-        Les gens croisés dans tes listes et tes événements, plus ceux que tu
+        Les gens croisés dans tes groupes et tes événements, plus ceux que tu
         ajoutes toi-même.
       </p>
 
@@ -108,7 +101,7 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
 
       {contacts.length === 0 && (
         <div className="text-center py-10 text-ink-soft">
-          Aucun contact pour l&apos;instant. Rejoins une liste, participe à un
+          Aucun contact pour l&apos;instant. Rejoins un groupe, participe à un
           événement, ou ajoute quelqu&apos;un ci-dessus.
         </div>
       )}

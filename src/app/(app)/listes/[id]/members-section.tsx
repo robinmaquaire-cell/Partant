@@ -44,7 +44,7 @@ export function MembersSection({
       <div className="mt-6 mb-6">
         <h3 className="font-extrabold mb-2 font-display">Membres</h3>
         <p className="text-sm text-ink-soft">
-          🔒 L&apos;administrateur a masqué la liste des membres.
+          🔒 L&apos;administrateur a masqué la liste des membres du groupe.
         </p>
       </div>
     );
@@ -80,13 +80,13 @@ export function MembersSection({
                   </button>
                 )}
                 <button
-                  title="Retirer de la liste"
+                  title="Retirer du groupe"
                   className="text-refuse"
                   disabled={pending}
                   onClick={() => {
                     if (
                       window.confirm(
-                        `Retirer ${m.pseudo} de la liste ?`
+                        `Retirer ${m.pseudo} du groupe ?`
                       )
                     )
                       run(() => removeMember(listId, m.userId));

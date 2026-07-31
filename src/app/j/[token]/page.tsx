@@ -49,7 +49,7 @@ export default async function InvitePage(props: {
       ) : (
         <>
           <p className="mb-6 text-base text-sand">
-            Tu es invité·e à rejoindre la liste
+            Tu es invité·e à rejoindre le groupe
           </p>
           <div
             className="rounded-2xl p-5 mb-4 text-white"
@@ -88,7 +88,7 @@ export default async function InvitePage(props: {
                   href={`/listes/${invite.list_id}`}
                   className="inline-block mt-2 w-full text-center px-4 py-2.5 rounded-xl font-bold text-white bg-signal"
                 >
-                  Ouvrir la liste
+                  Ouvrir le groupe
                 </Link>
               </div>
             ) : (

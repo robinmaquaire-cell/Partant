@@ -27,7 +27,7 @@ export async function removeMember(
   const { supabase, user } = await requireUser();
   if (!user) return { ok: false, error: "Tu n'es plus connecté·e." };
   if (userId === user.id)
-    return { ok: false, error: "Utilise « Quitter la liste » pour toi-même." };
+    return { ok: false, error: "Utilise « Quitter le groupe » pour toi-même." };
 
   const { error } = await supabase
     .from("list_members")
@@ -88,14 +88,14 @@ export async function addMemberByEmail(
   return { ok: true };
 }
 
-// Renommer une liste (réservé à ses admins par la sécurité Supabase).
+// Renommer un groupe (réservé à ses admins par la sécurité Supabase).
 export async function renameList(
   listId: string,
   name: string
 ): Promise<ActionResult> {
   if (!UUID_RE.test(listId)) return { ok: false, error: "Requête invalide." };
   const trimmed = name.trim();
-  if (!trimmed) return { ok: false, error: "Donne un nom à la liste." };
+  if (!trimmed) return { ok: false, error: "Donne un nom au groupe." };
   if (trimmed.length > 60)
     return { ok: false, error: "Ce nom est trop long (60 caractères max)." };
 
@@ -109,14 +109,14 @@ export async function renameList(
     .select("id");
   if (error) return { ok: false, error: "Le renommage a échoué." };
   if (!data || data.length === 0)
-    return { ok: false, error: "Seuls les admins de la liste peuvent la renommer." };
+    return { ok: false, error: "Seuls les admins du groupe peuvent le renommer." };
 
   revalidatePath(`/listes/${listId}`);
-  revalidatePath("/listes");
+  revalidatePath("/contacts/groupes");
   return { ok: true };
 }
 
-// Choisir l'emoji qui sert de logo à la liste (réservé aux admins).
+// Choisir l'emoji qui sert de logo au groupe (réservé aux admins).
 export async function setListEmoji(
   listId: string,
   emoji: string | null
@@ -135,10 +135,10 @@ export async function setListEmoji(
     .select("id");
   if (error) return { ok: false, error: "La sauvegarde a échoué." };
   if (!data || data.length === 0)
-    return { ok: false, error: "Seuls les admins de la liste peuvent la modifier." };
+    return { ok: false, error: "Seuls les admins du groupe peuvent le modifier." };
 
   revalidatePath(`/listes/${listId}`);
-  revalidatePath("/listes");
+  revalidatePath("/contacts/groupes");
   return { ok: true };
 }
 
@@ -176,17 +176,17 @@ export async function leaveList(listId: string): Promise<ActionResult> {
     .eq("list_id", listId);
 
   const me = members?.find((m) => m.user_id === user.id);
-  if (!me) return { ok: false, error: "Tu n'es pas membre de cette liste." };
+  if (!me) return { ok: false, error: "Tu n'es pas membre de ce groupe." };
 
   const others = (members ?? []).filter((m) => m.user_id !== user.id);
   const otherAdmins = others.filter((m) => m.role === "admin");
 
-  // Je suis le·la seul·e membre : quitter = supprimer la liste.
+  // Je suis le·la seul·e membre : quitter = supprimer le groupe.
   if (others.length === 0) {
     await supabase.from("list_members").delete().eq("list_id", listId);
     await supabase.from("lists").delete().eq("id", listId);
-    revalidatePath("/listes");
-    redirect("/listes");
+    revalidatePath("/contacts/groupes");
+    redirect("/contacts/groupes");
   }
 
   if (me.role === "admin" && otherAdmins.length === 0)
@@ -203,6 +203,6 @@ export async function leaveList(listId: string): Promise<ActionResult> {
     .eq("user_id", user.id);
   if (error) return { ok: false, error: "Le départ a échoué." };
 
-  revalidatePath("/listes");
-  redirect("/listes");
+  revalidatePath("/contacts/groupes");
+  redirect("/contacts/groupes");
 }

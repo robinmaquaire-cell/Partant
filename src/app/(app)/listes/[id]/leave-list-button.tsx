@@ -16,8 +16,8 @@ export function LeaveListButton({
   const leave = () =>
     startTransition(async () => {
       const confirmText = lastMember
-        ? "Tu es le·la dernier·ère membre : quitter supprimera la liste. Continuer ?"
-        : "Quitter cette liste ? Tu ne verras plus ses événements.";
+        ? "Tu es le·la dernier·ère membre : quitter supprimera le groupe. Continuer ?"
+        : "Quitter ce groupe ? Tu ne verras plus ses événements.";
       if (!window.confirm(confirmText)) return;
       const result = await leaveList(listId);
       if (result && !result.ok) setErr(result.error);
@@ -33,8 +33,8 @@ export function LeaveListButton({
         {pending
           ? "Départ…"
           : lastMember
-            ? "Quitter et supprimer la liste"
-            : "Quitter la liste"}
+            ? "Quitter et supprimer le groupe"
+            : "Quitter le groupe"}
       </button>
       {err && <p className="text-sm font-semibold mt-2 text-refuse">{err}</p>}
     </div>

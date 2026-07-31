@@ -16,7 +16,7 @@ export async function createList(input: {
   memberIds: string[];
 }): Promise<{ ok: false; error: string } | never> {
   const name = input.name.trim();
-  if (!name) return { ok: false, error: "Donne un nom à ta liste." };
+  if (!name) return { ok: false, error: "Donne un nom à ton groupe." };
   if (name.length > 60)
     return { ok: false, error: "Ce nom est trop long (60 caractères max)." };
   if (!LIST_COLORS.includes(input.color))
@@ -47,6 +47,6 @@ export async function createList(input: {
     });
   }
 
-  revalidatePath("/listes");
+  revalidatePath("/contacts/groupes");
   redirect(`/listes/${data}`);
 }

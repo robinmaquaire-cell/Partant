@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { ContactsView, type Contact } from "./contacts-view";
+import { ContactsView, type Contact } from "../contacts-view";
 
 type ContactRow = {
   contact_id: string;

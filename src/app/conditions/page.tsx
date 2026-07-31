@@ -22,23 +22,24 @@ export default function ConditionsPage() {
         <h2 className={h}>Le service</h2>
         <p className={p}>
           « Partants ? » aide des groupes d&apos;amis à organiser des sorties :
-          listes de diffusion privées, événements, réponses de participation et
-          répartition du matériel. Le service est fourni tel quel, sans garantie
-          de disponibilité, par son créateur, à titre non commercial.
+          contacts, groupes privés, listes de diffusion, événements, réponses
+          de participation et répartition du matériel. Le service est fourni
+          tel quel, sans garantie de disponibilité, par son créateur, à titre
+          non commercial.
         </p>
 
         <h2 className={h}>Ton compte</h2>
         <p className={p}>
           La connexion se fait par lien magique envoyé par e-mail — aucun mot de
           passe n&apos;est stocké. Tu es responsable de ce que tu publies
-          (titres, descriptions, photos). Les listes sont privées : on ne les
+          (titres, descriptions, photos). Les groupes sont privés : on ne les
           rejoint que sur invitation d&apos;un membre.
         </p>
 
         <h2 className={h}>Les données conservées</h2>
         <p className={p}>
           Uniquement ce qui fait fonctionner le service : ton adresse e-mail,
-          ton pseudo, ta photo de profil si tu en ajoutes une, tes listes, tes
+          ton pseudo, ta photo de profil si tu en ajoutes une, tes groupes, tes
           événements, tes réponses et le matériel que tu proposes. Aucune
           donnée n&apos;est vendue, partagée ou utilisée pour de la publicité.
           Pas de traceurs : seuls des cookies techniques de connexion sont

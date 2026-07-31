@@ -64,11 +64,11 @@ export default async function ContactDetailPage(props: {
       <ContactActions contactId={id} blocked={common.blocked} />
 
       <h3 className="font-extrabold mt-6 mb-2 font-display">
-        Listes en commun{" "}
+        Groupes en commun{" "}
         <span className="text-ink-soft">— {common.lists.length}</span>
       </h3>
       {common.lists.length === 0 ? (
-        <p className="text-sm text-ink-soft mb-4">Aucune liste en commun.</p>
+        <p className="text-sm text-ink-soft mb-4">Aucun groupe en commun.</p>
       ) : (
         <div className="mb-4">
           {common.lists.map((l) => (

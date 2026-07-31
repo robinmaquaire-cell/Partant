@@ -82,11 +82,11 @@ export function SyncRules({
       </p>
 
       <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-        Mes listes de diffusion
+        Mes groupes
       </div>
       {lists.length === 0 && (
         <p className="text-sm mb-2 text-ink-soft">
-          Tu n&apos;es membre d&apos;aucune liste pour l&apos;instant.
+          Tu n&apos;es membre d&apos;aucun groupe pour l&apos;instant.
         </p>
       )}
       {lists.map((l) => (

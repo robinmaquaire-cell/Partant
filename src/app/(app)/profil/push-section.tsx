@@ -158,7 +158,7 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
         <>
           <p className="text-sm mb-3 text-ink-soft">
             Cet appareil reçoit les notifications : nouvel événement dans tes
-            listes, rappel la veille.
+            groupes, rappel la veille.
           </p>
           <div className="flex flex-wrap gap-2">
             <button
@@ -194,7 +194,7 @@ export function PushSection({ vapidKey }: { vapidKey: string }) {
         <>
           <p className="text-sm mb-3 text-ink-soft">
             Reçois une alerte directement sur ton téléphone quand un événement
-            est proposé dans une de tes listes, ou la veille d&apos;un événement.
+            est proposé dans un de tes groupes, ou la veille d&apos;un événement.
           </p>
           <button
             type="button"

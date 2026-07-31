@@ -23,6 +23,6 @@ export async function joinList(
       error: "Impossible de rejoindre : le lien est peut-être révoqué.",
     };
 
-  revalidatePath("/listes");
+  revalidatePath("/contacts/groupes");
   redirect(`/listes/${data}`);
 }

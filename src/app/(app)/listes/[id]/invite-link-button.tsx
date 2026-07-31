@@ -49,7 +49,7 @@ export function InviteLinkButton({
         {copied ? "Lien copié ✓" : "🔗 Copier le lien d'invitation"}
       </button>
       <p className="text-xs mt-1 text-center text-ink-soft">
-        Envoie ce lien à qui tu veux : il permet de rejoindre la liste (et de
+        Envoie ce lien à qui tu veux : il permet de rejoindre le groupe (et de
         créer un compte au passage).
       </p>
       {isAdmin && (

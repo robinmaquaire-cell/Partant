@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-// L'onglet Listes couvre aussi l'écran Contacts (regroupés).
+// L'onglet Contacts regroupe le carnet de contacts, les listes de diffusion
+// et les groupes (anciennement « listes »). Les URL /listes/* restent
+// accessibles pour les emails et notifications déjà envoyés.
 const TABS = [
   { href: "/", label: "Événements", icon: "🗓", also: [] as string[] },
   { href: "/calendrier", label: "Calendrier", icon: "📅", also: [] },
-  { href: "/listes", label: "Listes", icon: "👥", also: ["/contacts"] },
+  { href: "/contacts", label: "Contacts", icon: "🤝", also: ["/listes"] },
   { href: "/profil", label: "Profil", icon: "⚙️", also: [] },
 ];
 

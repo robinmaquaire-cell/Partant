@@ -107,7 +107,7 @@ export function eventCreatedEmail(input: {
 ${input.location ? `<p style="margin:0 0 4px">📍 ${escapeHtml(input.location)}</p>` : ""}
 <p style="margin:0 0 16px;color:#3D5A55">Proposé par ${escapeHtml(input.creatorPseudo)} · ${escapeHtml(input.listNames.join(", "))}</p>
 ${button(url, "Partants ? Je réponds")}`,
-      "Tu reçois cet e-mail parce que tu es membre de cette liste sur Partants ?."
+      "Tu reçois cet e-mail parce que tu es membre de ce groupe sur Partants ?."
     ),
   };
 }
@@ -149,7 +149,7 @@ export function welcomeEmail(input: {
     subject: "Bienvenue sur Partants ? 🛶",
     html: layout(
       `<h1 style="font-size:20px;margin:0 0 8px">Bienvenue ${escapeHtml(input.pseudo)} !</h1>
-<p style="margin:0 0 8px">Ton compte est prêt. Sur Partants ?, tu reçois les propositions de sortie de tes listes, tu réponds en un geste, et tu vois qui ramène quoi.</p>
+<p style="margin:0 0 8px">Ton compte est prêt. Sur Partants ?, tu reçois les propositions de sortie de tes groupes, tu réponds en un geste, et tu vois qui ramène quoi.</p>
 <p style="margin:0 0 16px;color:#3D5A55">Astuce : ajoute l'application à ton écran d'accueil pour la retrouver comme une vraie appli.</p>
 ${button(appUrl(), "Ouvrir Partants ?")}`,
       "E-mail de bienvenue envoyé à la création de ton compte Partants ?."

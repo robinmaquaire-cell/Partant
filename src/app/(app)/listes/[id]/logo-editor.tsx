@@ -7,7 +7,7 @@ import { EmojiPicker } from "@/components/emoji-picker";
 import { ListLogo } from "@/components/list-logo";
 import { setListEmoji } from "./actions";
 
-// Logo de la liste : un emoji, ou une image envoyée depuis le téléphone.
+// Logo du groupe : un emoji, ou une image envoyée depuis le téléphone.
 export function LogoEditor({
   listId,
   name,
@@ -96,7 +96,7 @@ export function LogoEditor({
         onClick={() => setOpen(true)}
         className="text-xs font-bold underline text-ink-soft mb-3"
       >
-        🎨 Changer le logo de la liste
+        🎨 Changer le logo du groupe
       </button>
     );
 
@@ -104,7 +104,7 @@ export function LogoEditor({
     <div className="rounded-2xl p-4 mb-3 bg-card border-[1.5px] border-line">
       <div className="flex items-center gap-3 mb-3">
         <ListLogo list={{ name, color, emoji: current, logoUrl }} size={48} />
-        <div className="font-bold text-sm flex-1">Logo de la liste</div>
+        <div className="font-bold text-sm flex-1">Logo du groupe</div>
         <button
           type="button"
           onClick={() => setOpen(false)}

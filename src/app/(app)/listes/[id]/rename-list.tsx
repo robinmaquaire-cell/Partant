@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { renameList } from "./actions";
 
-// Le titre de la liste, renommable en place par ses admins.
+// Le titre du groupe, renommable en place par ses admins.
 export function ListTitle({
   listId,
   name,
@@ -38,7 +38,7 @@ export function ListTitle({
               setEditing(true);
             }}
             className="text-sm font-bold px-2 py-1 rounded-lg bg-white/20 shrink-0"
-            aria-label="Renommer la liste"
+            aria-label="Renommer le groupe"
           >
             ✏️ Renommer
           </button>

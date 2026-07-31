@@ -272,7 +272,7 @@ export default async function EvenementDetailPage(props: {
           ))}
           {lists.length === 0 && (
             <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-white/20">
-              🔗 Sur invitation — aucune liste de diffusion
+              🔗 Sur invitation — aucun groupe
             </span>
           )}
         </div>
@@ -327,9 +327,9 @@ export default async function EvenementDetailPage(props: {
               {outsiders.has(r.user_id) && (
                 <span
                   className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-sand text-pine"
-                  title="Cette personne n'est dans aucune liste de diffusion de l'événement"
+                  title="Cette personne n'est dans aucun groupe de l'événement"
                 >
-                  hors liste
+                  hors groupe
                 </span>
               )}
             </span>

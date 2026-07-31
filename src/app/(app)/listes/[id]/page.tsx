@@ -72,7 +72,7 @@ export default async function ListeDetailPage(props: {
 
   return (
     <div className="pb-8">
-      <Link href="/listes" className="inline-block text-sm font-bold mb-3 text-ink-soft">
+      <Link href="/contacts/groupes" className="inline-block text-sm font-bold mb-3 text-ink-soft">
         ← Retour
       </Link>
 
@@ -131,7 +131,7 @@ export default async function ListeDetailPage(props: {
         }))}
       />
 
-      <h3 className="font-extrabold mb-2 font-display">Événements de la liste</h3>
+      <h3 className="font-extrabold mb-2 font-display">Événements du groupe</h3>
       {listEvents.length === 0 && (
         <p className="text-sm text-ink-soft mb-6">
           Aucun événement pour l&apos;instant.

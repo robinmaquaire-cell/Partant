@@ -918,10 +918,10 @@ export function EventForm({
       )}
 
       <div className="mb-3">
-        <div className={label}>Partager avec les listes (facultatif)</div>
+        <div className={label}>Partager avec des groupes (facultatif)</div>
         {lists.length === 0 && (
           <p className="text-sm text-ink-soft">
-            Tu n&apos;as pas encore de liste de diffusion — ce n&apos;est pas
+            Tu n&apos;as pas encore de groupe — ce n&apos;est pas
             grave : tu pourras inviter qui tu veux avec le lien de partage.
           </p>
         )}
@@ -953,7 +953,7 @@ export function EventForm({
         })}
         {listIds.length === 0 && (
           <p className="text-xs mt-1 text-ink-soft">
-            🔗 Sans liste, l&apos;événement ne sera visible que par les
+            🔗 Sans groupe, l&apos;événement ne sera visible que par les
             personnes à qui tu enverras le lien de partage (bouton « Partager »
             une fois l&apos;événement créé).
           </p>

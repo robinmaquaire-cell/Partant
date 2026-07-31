@@ -55,12 +55,12 @@ export function NewListForm({ contacts }: { contacts: ContactOption[] }) {
   return (
     <div className="pb-8">
       <h2 className="text-xl font-extrabold mb-4 font-display">
-        Nouvelle liste de diffusion
+        Nouveau groupe
       </h2>
 
       <label className="block mb-3">
         <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-          Nom de la liste
+          Nom du groupe
         </div>
         <input
           className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2.5 text-[15px] text-ink outline-none focus:border-river"
@@ -101,7 +101,7 @@ export function NewListForm({ contacts }: { contacts: ContactOption[] }) {
         </div>
         <EmojiPicker value={emoji} onChange={setEmoji} />
         <p className="text-xs mt-1 text-ink-soft">
-          Tu pourras aussi mettre une vraie image une fois la liste créée.
+          Tu pourras aussi mettre une vraie image une fois le groupe créé.
         </p>
       </div>
 
@@ -130,7 +130,7 @@ export function NewListForm({ contacts }: { contacts: ContactOption[] }) {
         </div>
         <p className="text-xs mt-1 text-ink-soft">
           {visible
-            ? "Les membres de la liste peuvent voir qui d'autre en fait partie."
+            ? "Les membres du groupe peuvent voir qui d'autre en fait partie."
             : "Seuls les admins voient la liste des membres."}
         </p>
       </div>
@@ -142,13 +142,13 @@ export function NewListForm({ contacts }: { contacts: ContactOption[] }) {
         {contacts.length === 0 ? (
           <p className="text-sm text-ink-soft">
             Tu n&apos;as pas encore de contacts. Tu pourras inviter des gens par
-            lien une fois la liste créée.
+            lien une fois le groupe créé.
           </p>
         ) : (
           <>
             <p className="text-xs mb-2 text-ink-soft">
-              Pioche parmi tes contacts. Ils seront ajoutés directement à la
-              liste (tu pourras aussi inviter par lien plus tard).
+              Pioche parmi tes contacts. Ils seront ajoutés directement au
+              groupe (tu pourras aussi inviter par lien plus tard).
             </p>
             <input
               className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2.5 text-[15px] text-ink outline-none focus:border-river mb-2"
@@ -208,7 +208,7 @@ export function NewListForm({ contacts }: { contacts: ContactOption[] }) {
           disabled={pending}
           className="flex-1 px-4 py-2.5 rounded-xl font-bold text-white bg-signal transition-transform active:scale-95 disabled:opacity-60"
         >
-          {pending ? "Création…" : "Créer la liste"}
+          {pending ? "Création…" : "Créer le groupe"}
         </button>
       </div>
     </div>
