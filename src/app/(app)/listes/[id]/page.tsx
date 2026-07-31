@@ -7,6 +7,7 @@ import { LeaveListButton } from "./leave-list-button";
 import { ListTitle } from "./rename-list";
 import { LogoEditor } from "./logo-editor";
 import { ListLogo } from "@/components/list-logo";
+import { GroupEventsSection } from "./group-events-section";
 
 type MemberRow = {
   user_id: string;
@@ -54,7 +55,7 @@ export default async function ListeDetailPage(props: {
 
   const { data: eventLinks } = await supabase
     .from("event_lists")
-    .select("events(id, title, event_date, event_time)")
+    .select("events(id, title, event_date, event_time, location_text)")
     .eq("list_id", id);
   const listEvents = ((eventLinks ?? []) as unknown as {
     events: {
@@ -62,6 +63,7 @@ export default async function ListeDetailPage(props: {
       title: string;
       event_date: string;
       event_time: string;
+      location_text: string;
     } | null;
   }[])
     .map((el) => el.events)
@@ -131,30 +133,7 @@ export default async function ListeDetailPage(props: {
         }))}
       />
 
-      <h3 className="font-extrabold mb-2 font-display">Événements du groupe</h3>
-      {listEvents.length === 0 && (
-        <p className="text-sm text-ink-soft mb-6">
-          Aucun événement pour l&apos;instant.
-        </p>
-      )}
-      <div className="mb-6">
-        {listEvents.map((ev) => (
-          <Link
-            key={ev.id}
-            href={`/evenements/${ev.id}`}
-            className="rounded-xl px-4 py-3 mb-2 flex justify-between items-center bg-card border-[1.5px] border-line"
-          >
-            <span className="font-semibold text-sm">{ev.title}</span>
-            <span className="text-xs font-bold text-ink-soft">
-              {new Date(ev.event_date + "T00:00").toLocaleDateString("fr-FR", {
-                day: "numeric",
-                month: "short",
-              })}{" "}
-              · {ev.event_time.slice(0, 5)}
-            </span>
-          </Link>
-        ))}
-      </div>
+      <GroupEventsSection events={listEvents} />
 
       <LeaveListButton listId={list.id} lastMember={members.length === 1} />
     </div>

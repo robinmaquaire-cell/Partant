@@ -3,13 +3,22 @@
 import { useState } from "react";
 import Link from "next/link";
 import { relTime } from "@/lib/rel-time";
-import type { EventCardData } from "./event-card";
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
+// Type minimal attendu par la vue : elle n'utilise que ces 5 champs.
+// Ainsi la même vue sert au calendrier global et à celui d'un groupe.
+export type CalendarEvent = {
+  id: string;
+  title: string;
+  event_date: string;
+  event_time: string;
+  location_text: string;
+};
+
 // Vue calendrier mensuelle : points sur les jours avec événements,
 // toucher un jour affiche ses événements (reprise du prototype validé).
-export function CalendarView({ events }: { events: EventCardData[] }) {
+export function CalendarView({ events }: { events: CalendarEvent[] }) {
   const today = new Date();
   const [month, setMonth] = useState(
     new Date(today.getFullYear(), today.getMonth(), 1)
@@ -23,7 +32,7 @@ export function CalendarView({ events }: { events: EventCardData[] }) {
   const keyOf = (d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
   const todayKey = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
 
-  const byDay = new Map<string, EventCardData[]>();
+  const byDay = new Map<string, CalendarEvent[]>();
   for (const e of events) {
     const list = byDay.get(e.event_date) ?? [];
     list.push(e);
