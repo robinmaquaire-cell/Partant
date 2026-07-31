@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { regenerateContactInviteToken } from "./invite-link-actions";
+import { siteOrigin } from "@/lib/site-origin";
 
 export function InviteLinkBox({ token }: { token: string }) {
   const router = useRouter();
@@ -12,10 +13,7 @@ export function InviteLinkBox({ token }: { token: string }) {
   const [err, setErr] = useState("");
   const [pending, startTransition] = useTransition();
 
-  const url =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/c/${current}`
-      : `/c/${current}`;
+  const url = `${siteOrigin()}/c/${current}`;
 
   const copy = async () => {
     try {

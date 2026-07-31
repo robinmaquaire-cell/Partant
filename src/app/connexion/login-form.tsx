@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { siteOrigin } from "@/lib/site-origin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -37,7 +38,7 @@ export function LoginForm({ erreur }: { erreur?: string }) {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email: value,
-      options: { emailRedirectTo: `${window.location.origin}/auth/confirm` },
+      options: { emailRedirectTo: `${siteOrigin()}/auth/confirm` },
     });
     setBusy(false);
     if (error) {
@@ -92,7 +93,7 @@ export function LoginForm({ erreur }: { erreur?: string }) {
     setBusy(true);
     const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(value, {
-      redirectTo: `${window.location.origin}/auth/confirm?next=/profil?mdp=1`,
+      redirectTo: `${siteOrigin()}/auth/confirm?next=/profil?mdp=1`,
     });
     setBusy(false);
     if (error) {

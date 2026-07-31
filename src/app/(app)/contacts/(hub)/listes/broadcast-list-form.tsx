@@ -6,6 +6,7 @@ import { Avatar } from "@/components/avatar";
 import { EmojiPicker } from "@/components/emoji-picker";
 import { ListLogo } from "@/components/list-logo";
 import { LIST_COLORS } from "@/lib/list-colors";
+import { siteOrigin } from "@/lib/site-origin";
 import {
   createBroadcastList,
   deleteBroadcastList,
@@ -85,7 +86,7 @@ export function BroadcastListForm({
 
   const copyLink = async () => {
     if (!mode.edit) return;
-    const url = `${window.location.origin}/l/${mode.id}`;
+    const url = `${siteOrigin()}/l/${mode.id}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { regenerateInvite } from "./actions";
+import { siteOrigin } from "@/lib/site-origin";
 
 export function InviteLinkButton({
   token,
@@ -17,7 +18,7 @@ export function InviteLinkButton({
   const [pending, startTransition] = useTransition();
 
   const copy = async () => {
-    const url = `${window.location.origin}/j/${token}`;
+    const url = `${siteOrigin()}/j/${token}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);

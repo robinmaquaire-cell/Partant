@@ -7,6 +7,7 @@ import {
   type ShareContact,
   type ShareGroup,
 } from "./share-modal";
+import { siteOrigin } from "@/lib/site-origin";
 
 // Bouton « Partager » en haut de la page d'un événement.
 // Pour l'organisateur : ouvre la modale complète (lien + groupes + listes
@@ -37,7 +38,7 @@ export function ShareButton({
   const [manual, setManual] = useState("");
 
   const shareNatively = async () => {
-    const url = `${window.location.origin}${path}`;
+    const url = `${siteOrigin()}${path}`;
     const text = withInvite
       ? `Partants ? « ${title} » — rejoins-nous :`
       : `Partants ? — l'appli où on organise nos sorties :`;
@@ -60,8 +61,7 @@ export function ShareButton({
   };
 
   const onClick = isOrganizer ? () => setModalOpen(true) : shareNatively;
-  const shareUrl =
-    typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+  const shareUrl = `${siteOrigin()}${path}`;
 
   return (
     <>

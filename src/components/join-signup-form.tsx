@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { siteOrigin } from "@/lib/site-origin";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -80,7 +81,7 @@ export function JoinSignupForm({
     const { error } = await supabase.auth.signInWithOtp({
       email: value,
       options: {
-        emailRedirectTo: `${window.location.origin}/auth/confirm?next=${next}`,
+        emailRedirectTo: `${siteOrigin()}/auth/confirm?next=${next}`,
         // Connexion à un compte existant : on ne crée rien.
         ...(mode === "nouveau"
           ? { data: { pseudo: pseudo.trim() } }
