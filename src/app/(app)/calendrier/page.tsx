@@ -6,6 +6,7 @@ import { MyCalendar } from "./my-calendar";
 import { ShareCard } from "./share-card";
 import { SyncRules, type CalendarList } from "./sync-rules";
 import { EventSyncList, type SyncEvent } from "./event-sync-list";
+import { MyAvailability, type AvailSlot } from "./my-availability";
 
 type CalendarRow = {
   event_id: string;
@@ -35,22 +36,59 @@ export default async function CalendrierPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const [events, { data: rows }, { data: prefs }, { data: memberships }, { data: token }] =
-    await Promise.all([
-      fetchMyEvents(supabase, user.id),
-      supabase.rpc("my_calendar_rows"),
-      supabase
-        .from("calendar_prefs")
-        .select("only_yes, include_guest_events, date_from, date_to, categories")
-        .eq("user_id", user.id)
-        .maybeSingle(),
-      supabase
-        .from("list_members")
-        .select("in_calendar, lists(id, name, color, emoji, logo_url)")
-        .eq("user_id", user.id),
-      // Crée le lien de calendrier à la première visite.
-      supabase.rpc("get_calendar_token"),
-    ]);
+  // Fenêtre pour la vue « Ma disponibilité » : ~3 mois autour d'aujourd'hui
+  // (assez pour naviguer un peu avant/après sans nouvelle requête).
+  const availFrom = new Date();
+  availFrom.setUTCMonth(availFrom.getUTCMonth() - 1);
+  availFrom.setUTCDate(1);
+  availFrom.setUTCHours(0, 0, 0, 0);
+  const availTo = new Date();
+  availTo.setUTCMonth(availTo.getUTCMonth() + 2);
+  availTo.setUTCDate(1);
+  availTo.setUTCHours(0, 0, 0, 0);
+
+  const [
+    events,
+    { data: rows },
+    { data: prefs },
+    { data: memberships },
+    { data: token },
+    { data: availRows },
+  ] = await Promise.all([
+    fetchMyEvents(supabase, user.id),
+    supabase.rpc("my_calendar_rows"),
+    supabase
+      .from("calendar_prefs")
+      .select("only_yes, include_guest_events, date_from, date_to, categories")
+      .eq("user_id", user.id)
+      .maybeSingle(),
+    supabase
+      .from("list_members")
+      .select("in_calendar, lists(id, name, color, emoji, logo_url)")
+      .eq("user_id", user.id),
+    // Crée le lien de calendrier à la première visite.
+    supabase.rpc("get_calendar_token"),
+    supabase.rpc("my_availability_slots", {
+      p_from: availFrom.toISOString(),
+      p_to: availTo.toISOString(),
+    }),
+  ]);
+
+  const initialAvail: AvailSlot[] = (
+    (availRows ?? []) as {
+      source: "ics" | "partant" | "manual";
+      slot_id: string | null;
+      starts_at: string;
+      ends_at: string;
+      label: string | null;
+    }[]
+  ).map((r) => ({
+    source: r.source,
+    slotId: r.slot_id,
+    startsAt: r.starts_at,
+    endsAt: r.ends_at,
+    label: r.label,
+  }));
 
   const syncOf = new Map(
     ((rows ?? []) as CalendarRow[]).map((r) => [r.event_id, r])
@@ -114,6 +152,16 @@ export default async function CalendrierPage() {
   return (
     <div className="pb-8">
       <h2 className="text-xl font-extrabold mb-1 font-display">
+        Ma disponibilité
+      </h2>
+      <p className="text-sm mb-4 text-ink-soft">
+        Ton agenda perso, tes événements Partants ? où tu as dit « oui », et
+        les créneaux que tu ajoutes ici — regroupés en un seul calendrier.
+      </p>
+
+      <MyAvailability initialSlots={initialAvail} />
+
+      <h2 className="text-xl font-extrabold mt-8 mb-1 font-display">
         Mon calendrier
       </h2>
       <p className="text-sm mb-4 text-ink-soft">
