@@ -1,11 +1,16 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { addManualBusySlot, removeManualBusySlot } from "./availability-actions";
+import {
+  addManualBusySlot,
+  addRecurringBusyRule,
+  removeManualBusySlot,
+  removeRecurringBusyRule,
+} from "./availability-actions";
 
 export type AvailSlot = {
   source: "ics" | "partant" | "manual";
-  slotId: string | null;
+  slotId: string | null; // « r-<id> » pour les occurrences de règle
   startsAt: string; // ISO
   endsAt: string;
   label: string | null;
@@ -13,13 +18,15 @@ export type AvailSlot = {
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
-// Découpe : matin (6-12), après-midi (12-18), soir (18-24). On considère
-// un jour occupé sur un segment si au moins un créneau chevauche.
+// Découpe : matin (6-12), après-midi (12-18), soir (18-24). Un segment
+// s'affiche rouge si au moins un créneau le chevauche.
 const SEGMENTS = [
   [6, 12],
   [12, 18],
   [18, 24],
 ] as const;
+
+const WEEKDAY_LABELS = ["L", "M", "M", "J", "V", "S", "D"];
 
 function dayKey(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -28,7 +35,7 @@ function dayKey(d: Date): string {
 function slotsForDay(
   slots: AvailSlot[],
   day: Date
-): { seg: readonly [number, number]; busy: boolean; slots: AvailSlot[] }[] {
+): { seg: readonly [number, number]; busy: boolean }[] {
   const dayStart = new Date(day);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(day);
@@ -45,12 +52,12 @@ function slotsForDay(
     a.setHours(h1, 0, 0, 0);
     const b = new Date(day);
     b.setHours(h2, 0, 0, 0);
-    const overlap = daySlots.filter((s) => {
+    const busy = daySlots.some((s) => {
       const st = new Date(s.startsAt);
       const en = new Date(s.endsAt);
       return en > a && st < b;
     });
-    return { seg, busy: overlap.length > 0, slots: overlap };
+    return { seg, busy };
   });
 }
 
@@ -67,6 +74,18 @@ function timeLabel(iso: string): string {
   });
 }
 
+function isAllDay(s: AvailSlot): boolean {
+  const st = new Date(s.startsAt);
+  const en = new Date(s.endsAt);
+  // ~24 h et démarre à minuit (Paris).
+  const durH = (en.getTime() - st.getTime()) / 3600000;
+  return durH >= 23.5 && st.getHours() === 0 && st.getMinutes() === 0;
+}
+
+function isRecurringSlot(s: AvailSlot): boolean {
+  return !!s.slotId && s.slotId.startsWith("r-");
+}
+
 export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) {
   const today = new Date();
   const [month, setMonth] = useState(
@@ -78,10 +97,14 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [pending, startTransition] = useTransition();
 
-  // Formulaire d'ajout d'un créneau manuel.
+  // Formulaire d'ajout.
   const [note, setNote] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("18:00");
+  const [allDay, setAllDay] = useState(false);
+  const [recurring, setRecurring] = useState(false);
+  const [weekdays, setWeekdays] = useState<Set<number>>(new Set());
+  const [endsOn, setEndsOn] = useState("");
 
   const y = month.getFullYear();
   const m = month.getMonth();
@@ -118,19 +141,77 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
       .sort((a, b) => a.startsAt.localeCompare(b.startsAt));
   }, [selectedDay, slots]);
 
-  const saveManual = () =>
+  const resetForm = () => {
+    setNote("");
+    setStartTime("09:00");
+    setEndTime("18:00");
+    setAllDay(false);
+    setRecurring(false);
+    setWeekdays(new Set());
+    setEndsOn("");
+    setAdding(false);
+  };
+
+  const toggleWeekday = (i: number) =>
+    setWeekdays((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i);
+      else next.add(i);
+      return next;
+    });
+
+  const saveSlot = () =>
     startTransition(async () => {
       if (!selected) return;
       setMsg(null);
-      const result = await addManualBusySlot(selected, startTime, endTime, note);
+      if (recurring) {
+        // Règle récurrente : pré-cocher le jour de la date sélectionnée
+        // si aucun jour n'est coché — arrangement gentil pour l'utilisateur.
+        const dayIsoIndex = (new Date(selected).getDay() + 6) % 7;
+        const wd = weekdays.size === 0 ? [dayIsoIndex] : [...weekdays];
+        const result = await addRecurringBusyRule({
+          weekdays: wd,
+          allDay,
+          startTime,
+          endTime,
+          startsOn: selected,
+          endsOn: endsOn || null,
+          note,
+        });
+        if (!result.ok) {
+          setMsg({ ok: false, text: result.error });
+          return;
+        }
+        // Le rendu du serveur est nécessaire pour voir les nouvelles
+        // occurrences réparties sur toutes les dates : on rafraîchit.
+        resetForm();
+        setMsg({ ok: true, text: "Règle enregistrée ✓" });
+        // Recharger la page pour re-fetcher les slots (règles expandues).
+        window.location.reload();
+        return;
+      }
+      // Créneau ponctuel.
+      const result = await addManualBusySlot(
+        selected,
+        startTime,
+        endTime,
+        note,
+        allDay
+      );
       if (!result.ok) {
         setMsg({ ok: false, text: result.error });
         return;
       }
-      // On l'ajoute à l'état local avec le vrai id renvoyé par le serveur,
-      // pour que la suppression fonctionne dans la foulée sans re-fetch.
-      const dayStartLocal = new Date(`${selected}T${startTime}`);
-      const dayEndLocal = new Date(`${selected}T${endTime}`);
+      const dayStartLocal = new Date(
+        `${selected}T${allDay ? "00:00" : startTime}`
+      );
+      const dayEndLocal = allDay
+        ? (() => {
+            const d = new Date(dayStartLocal);
+            d.setDate(d.getDate() + 1);
+            return d;
+          })()
+        : new Date(`${selected}T${endTime}`);
       setSlots((prev) => [
         ...prev,
         {
@@ -141,24 +222,44 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
           label: note.trim() || null,
         },
       ]);
-      setNote("");
-      setAdding(false);
+      resetForm();
       setMsg({ ok: true, text: "Créneau enregistré ✓" });
     });
 
   const remove = (s: AvailSlot) => {
     if (s.source !== "manual" || !s.slotId) return;
+    const isRule = isRecurringSlot(s);
+    if (isRule) {
+      if (
+        !window.confirm(
+          "Supprimer toutes les occurrences de cette règle récurrente ?"
+        )
+      )
+        return;
+    }
     startTransition(async () => {
       setMsg(null);
-      const result = await removeManualBusySlot(s.slotId!);
+      const bareId = isRule ? s.slotId!.slice(2) : s.slotId!;
+      const result = isRule
+        ? await removeRecurringBusyRule(bareId)
+        : await removeManualBusySlot(bareId);
       if (!result.ok) {
         setMsg({ ok: false, text: result.error });
         return;
       }
-      setSlots((prev) => prev.filter((x) => x.slotId !== s.slotId));
-      setMsg({ ok: true, text: "Créneau retiré." });
+      if (isRule) {
+        // Supprimer toutes les occurrences de la règle localement.
+        setSlots((prev) => prev.filter((x) => x.slotId !== s.slotId));
+      } else {
+        setSlots((prev) => prev.filter((x) => x.slotId !== s.slotId));
+      }
+      setMsg({ ok: true, text: isRule ? "Règle retirée." : "Créneau retiré." });
     });
   };
+
+  const input =
+    "w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2 text-[15px] text-ink outline-none focus:border-river";
+  const label = "text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft";
 
   return (
     <div>
@@ -185,7 +286,7 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
       </div>
 
       <div className="grid grid-cols-7 gap-1 text-center mb-1">
-        {["L", "M", "M", "J", "V", "S", "D"].map((d, i) => (
+        {WEEKDAY_LABELS.map((d, i) => (
           <div key={i} className="text-xs font-bold py-1 text-ink-soft">
             {d}
           </div>
@@ -205,7 +306,7 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
               type="button"
               onClick={() => {
                 setSelected(k);
-                setAdding(false);
+                resetForm();
                 setMsg(null);
               }}
               className={`rounded-xl py-1.5 flex flex-col items-center border-[1.5px] ${
@@ -285,6 +386,8 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
 
           {selectedSlots.map((s) => {
             const b = sourceBadge[s.source];
+            const isRule = isRecurringSlot(s);
+            const wholeDay = isAllDay(s);
             return (
               <div
                 key={s.slotId ?? `${s.source}-${s.startsAt}`}
@@ -299,9 +402,16 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
                   <div className="text-sm font-semibold truncate">
                     {s.label ??
                       (s.source === "ics" ? "Occupé" : "Créneau occupé")}
+                    {isRule && (
+                      <span className="ml-1.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-pine/10 text-pine align-middle">
+                        ↻ récurrent
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-ink-soft">
-                    {timeLabel(s.startsAt)} – {timeLabel(s.endsAt)}
+                    {wholeDay
+                      ? "Journée entière"
+                      : `${timeLabel(s.startsAt)} – ${timeLabel(s.endsAt)}`}
                   </div>
                 </span>
                 {s.source === "manual" && (
@@ -310,7 +420,11 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
                     disabled={pending}
                     onClick={() => remove(s)}
                     className="text-xs font-bold text-refuse px-2 disabled:opacity-60"
-                    aria-label="Retirer ce créneau"
+                    aria-label={
+                      isRule
+                        ? "Retirer cette règle récurrente"
+                        : "Retirer ce créneau"
+                    }
                   >
                     ✕
                   </button>
@@ -321,48 +435,100 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
 
           {adding && (
             <div className="rounded-2xl p-3 mt-2 bg-card border-[1.5px] border-line">
-              <div className="flex gap-2 mb-2">
-                <label className="flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-                    Début
-                  </div>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2 text-[15px] text-ink outline-none focus:border-river"
-                  />
-                </label>
-                <label className="flex-1">
-                  <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-                    Fin
-                  </div>
-                  <input
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2 text-[15px] text-ink outline-none focus:border-river"
-                  />
-                </label>
-              </div>
-              <label className="block mb-2">
-                <div className="text-xs font-bold uppercase tracking-wide mb-1 text-ink-soft">
-                  Note (facultatif)
+              <label className="flex items-center gap-2 mb-3 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={allDay}
+                  onChange={(e) => setAllDay(e.target.checked)}
+                />
+                Journée entière
+              </label>
+              {!allDay && (
+                <div className="flex gap-2 mb-2">
+                  <label className="flex-1">
+                    <div className={label}>Début</div>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={(e) => setStartTime(e.target.value)}
+                      className={input}
+                    />
+                  </label>
+                  <label className="flex-1">
+                    <div className={label}>Fin</div>
+                    <input
+                      type="time"
+                      value={endTime}
+                      onChange={(e) => setEndTime(e.target.value)}
+                      className={input}
+                    />
+                  </label>
                 </div>
+              )}
+              <label className="block mb-2">
+                <div className={label}>Note (facultatif)</div>
                 <input
                   type="text"
                   maxLength={120}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
-                  className="w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2 text-[15px] text-ink outline-none focus:border-river"
+                  className={input}
                   placeholder="ex. WE en famille"
                 />
               </label>
-              <div className="flex gap-2">
+
+              <label className="flex items-center gap-2 mt-3 mb-2 text-sm font-semibold">
+                <input
+                  type="checkbox"
+                  checked={recurring}
+                  onChange={(e) => setRecurring(e.target.checked)}
+                />
+                ↻ Répéter chaque semaine
+              </label>
+              {recurring && (
+                <div className="pl-6 border-l-2 border-line ml-1 mb-2">
+                  <div className={label}>Jours de la semaine</div>
+                  <div className="flex gap-1 mb-2">
+                    {WEEKDAY_LABELS.map((d, i) => {
+                      const on = weekdays.has(i);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          onClick={() => toggleWeekday(i)}
+                          className={`w-8 h-8 rounded-full text-xs font-bold border-[1.5px] ${
+                            on
+                              ? "bg-ink text-paper border-ink"
+                              : "text-ink-soft border-line"
+                          }`}
+                        >
+                          {d}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-[11px] text-ink-soft mb-2">
+                    Rien de coché ? On répète chaque semaine le jour de la
+                    date choisie.
+                  </p>
+                  <label className="block">
+                    <div className={label}>Jusqu&apos;au (facultatif)</div>
+                    <input
+                      type="date"
+                      value={endsOn}
+                      onChange={(e) => setEndsOn(e.target.value)}
+                      className={input}
+                      min={selected ?? undefined}
+                    />
+                  </label>
+                </div>
+              )}
+
+              <div className="flex gap-2 mt-3">
                 <button
                   type="button"
                   onClick={() => {
-                    setAdding(false);
+                    resetForm();
                     setMsg(null);
                   }}
                   className="flex-1 px-3 py-2 rounded-xl text-sm font-bold text-ink-soft border-[1.5px] border-line"
@@ -372,7 +538,7 @@ export function MyAvailability({ initialSlots }: { initialSlots: AvailSlot[] }) 
                 <button
                   type="button"
                   disabled={pending}
-                  onClick={saveManual}
+                  onClick={saveSlot}
                   className="flex-1 px-3 py-2 rounded-xl text-sm font-bold text-white bg-signal disabled:opacity-60"
                 >
                   {pending ? "…" : "Enregistrer"}

@@ -7,6 +7,12 @@ import { ShareCard } from "./share-card";
 import { SyncRules, type CalendarList } from "./sync-rules";
 import { EventSyncList, type SyncEvent } from "./event-sync-list";
 import { MyAvailability, type AvailSlot } from "./my-availability";
+import {
+  ShareDispoPanel,
+  type ShareContact,
+  type ShareGroup,
+} from "./share-dispo-panel";
+import type { ShareMode } from "./availability-actions";
 
 type CalendarRow = {
   event_id: string;
@@ -54,6 +60,8 @@ export default async function CalendrierPage() {
     { data: memberships },
     { data: token },
     { data: availRows },
+    { data: shareRows },
+    { data: contactsRows },
   ] = await Promise.all([
     fetchMyEvents(supabase, user.id),
     supabase.rpc("my_calendar_rows"),
@@ -72,6 +80,8 @@ export default async function CalendrierPage() {
       p_from: availFrom.toISOString(),
       p_to: availTo.toISOString(),
     }),
+    supabase.rpc("my_busy_share"),
+    supabase.rpc("my_contacts"),
   ]);
 
   const initialAvail: AvailSlot[] = (
@@ -89,6 +99,27 @@ export default async function CalendrierPage() {
     endsAt: r.ends_at,
     label: r.label,
   }));
+
+  const shareState = ((shareRows ?? []) as {
+    mode: ShareMode;
+    contact_ids: string[];
+    group_ids: string[];
+  }[])[0] ?? { mode: "none" as ShareMode, contact_ids: [], group_ids: [] };
+
+  const shareContacts: ShareContact[] = (
+    (contactsRows ?? []) as {
+      contact_id: string;
+      pseudo: string | null;
+      avatar_url: string | null;
+      blocked: boolean;
+    }[]
+  )
+    .filter((c) => !c.blocked)
+    .map((c) => ({
+      id: c.contact_id,
+      pseudo: c.pseudo || "(sans pseudo)",
+      avatarUrl: c.avatar_url,
+    }));
 
   const syncOf = new Map(
     ((rows ?? []) as CalendarRow[]).map((r) => [r.event_id, r])
@@ -115,6 +146,14 @@ export default async function CalendrierPage() {
       inCalendar: m.in_calendar,
     }))
     .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+
+  const shareGroups: ShareGroup[] = lists.map((l) => ({
+    id: l.id,
+    name: l.name,
+    color: l.color,
+    emoji: l.emoji,
+    logoUrl: l.logoUrl,
+  }));
 
   const categories = [
     ...new Set(
@@ -160,6 +199,14 @@ export default async function CalendrierPage() {
       </p>
 
       <MyAvailability initialSlots={initialAvail} />
+
+      <ShareDispoPanel
+        initialMode={shareState.mode}
+        initialContactIds={shareState.contact_ids ?? []}
+        initialGroupIds={shareState.group_ids ?? []}
+        contacts={shareContacts}
+        groups={shareGroups}
+      />
 
       <h2 className="text-xl font-extrabold mt-8 mb-1 font-display">
         Mon calendrier
