@@ -6,6 +6,8 @@ import { AvatarUpload } from "./avatar-upload";
 import { PasswordSection } from "./password-section";
 import { PushSection } from "./push-section";
 import { AvailabilitySection } from "./availability-section";
+import { AccountTypeSection } from "./account-type-section";
+import { type AccountType } from "./account-type-actions";
 import { DeleteAccount } from "./delete-account";
 import { isAdminEmail } from "@/lib/admin";
 import Link from "next/link";
@@ -33,7 +35,7 @@ export default async function ProfilPage(props: {
     await Promise.all([
       supabase
         .from("profiles")
-        .select("pseudo, contact, avatar_url, email_notifications")
+        .select("pseudo, contact, avatar_url, email_notifications, account_type")
         .eq("id", user.id)
         .single(),
       supabase
@@ -81,6 +83,9 @@ export default async function ProfilPage(props: {
         }}
       />
       <PasswordSection highlight={mdp === "1"} />
+      <AccountTypeSection
+        initial={((profile?.account_type as AccountType) ?? "perso")}
+      />
       {process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && (
         <PushSection vapidKey={process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY} />
       )}
