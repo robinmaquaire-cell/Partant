@@ -10,18 +10,24 @@ export default async function NouvelEvenementPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const [{ data: lists }, { data: templates }, { data: cats }, { data: contacts }] =
-    await Promise.all([
-      supabase.rpc("my_lists"),
-      supabase
-        .from("templates")
-        .select("id, name, payload")
-        .order("created_at", { ascending: true }),
-      // Les tags déjà utilisés, proposés en suggestion.
-      supabase.from("events").select("tags"),
-      // Mes contacts, pour vérifier leurs disponibilités (hors bloqués).
-      supabase.rpc("my_contacts"),
-    ]);
+  const [
+    { data: lists },
+    { data: broadcasts },
+    { data: templates },
+    { data: cats },
+    { data: contacts },
+  ] = await Promise.all([
+    supabase.rpc("my_lists"),
+    supabase.rpc("my_broadcast_lists"),
+    supabase
+      .from("templates")
+      .select("id, name, payload")
+      .order("created_at", { ascending: true }),
+    // Les tags déjà utilisés, proposés en suggestion.
+    supabase.from("events").select("tags"),
+    // Mes contacts, pour vérifier leurs disponibilités (hors bloqués).
+    supabase.rpc("my_contacts"),
+  ]);
 
   return (
     <EventForm
@@ -43,6 +49,21 @@ export default async function NouvelEvenementPage() {
           avatarUrl: c.avatar_url,
         }))}
       lists={listOptionsFrom((lists ?? []) as MyListRow[])}
+      broadcastLists={(
+        (broadcasts ?? []) as {
+          id: string;
+          name: string;
+          color: string;
+          emoji: string | null;
+          member_count: number;
+        }[]
+      ).map((b) => ({
+        id: b.id,
+        name: b.name,
+        color: b.color,
+        emoji: b.emoji,
+        memberCount: b.member_count,
+      }))}
       usedTags={[
         ...new Set(
           ((cats ?? []) as { tags: string[] | null }[])

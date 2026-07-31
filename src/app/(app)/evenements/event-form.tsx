@@ -42,6 +42,13 @@ type ListOption = {
   emoji: string | null;
   logoUrl: string | null;
 };
+type BroadcastListOption = {
+  id: string;
+  name: string;
+  color: string;
+  emoji: string | null;
+  memberCount: number;
+};
 type TemplateOption = { id: string; name: string; payload: TemplatePayload };
 type ExistingItem = {
   id: string;
@@ -93,6 +100,7 @@ const savedRow =
 
 export function EventForm({
   lists,
+  broadcastLists = [],
   templates = [],
   usedTags = [],
   edit,
@@ -100,6 +108,7 @@ export function EventForm({
   contacts = [],
 }: {
   lists: ListOption[];
+  broadcastLists?: BroadcastListOption[]; // listes de diffusion, création seulement
   templates?: TemplateOption[];
   usedTags?: string[]; // tags déjà utilisés ailleurs, en suggestion
   edit?: EditProps;
@@ -128,6 +137,8 @@ export function EventForm({
   const [tags, setTags] = useState<string[]>(init?.tags ?? []);
   const [tagInput, setTagInput] = useState("");
   const [listIds, setListIds] = useState<string[]>(init?.listIds ?? []);
+  // Les listes de diffusion sont propres à la création (jamais en édition).
+  const [broadcastIds, setBroadcastIds] = useState<string[]>([]);
 
   // Ajoute/retire un tag (casse et espaces ignorés pour comparer).
   const toggleTag = (raw: string) => {
@@ -265,6 +276,11 @@ export function EventForm({
       p.includes(id) ? p.filter((l) => l !== id) : [...p, id]
     );
 
+  const toggleBroadcast = (id: string) =>
+    setBroadcastIds((p) =>
+      p.includes(id) ? p.filter((l) => l !== id) : [...p, id]
+    );
+
   // L'objet en cours de saisie, tant qu'il n'a pas été ajouté à la liste.
   const draftItem = (): EquipmentDraft | null =>
     eqName.trim()
@@ -333,6 +349,7 @@ export function EventForm({
         collaborative,
         tags,
         listIds,
+        broadcastListIds: edit ? undefined : broadcastIds,
         equipment: allEquipment,
         roles: allRoles,
       };
@@ -959,6 +976,48 @@ export function EventForm({
           </p>
         )}
       </div>
+
+      {!edit && broadcastLists.length > 0 && (
+        <div className="mb-3">
+          <div className={label}>
+            Envoyer aussi à des listes de diffusion (facultatif)
+          </div>
+          <p className="text-xs mb-2 text-ink-soft">
+            Chaque contact des listes cochées recevra l&apos;événement à titre
+            personnel.
+          </p>
+          {broadcastLists.map((b) => {
+            const on = broadcastIds.includes(b.id);
+            return (
+              <button
+                key={b.id}
+                type="button"
+                onClick={() => toggleBroadcast(b.id)}
+                className="flex items-center gap-2 w-full px-3 py-2 rounded-xl mb-1 text-sm font-semibold text-left text-ink border-[1.5px]"
+                style={{
+                  background: on ? b.color + "1A" : "#FFFFFF",
+                  borderColor: on ? b.color : "#DCE6E2",
+                }}
+              >
+                <ListLogo
+                  list={{
+                    name: b.name,
+                    color: b.color,
+                    emoji: b.emoji,
+                    logoUrl: null,
+                  }}
+                  size={24}
+                />
+                <span className="flex-1">{b.name}</span>
+                <span className="text-xs text-ink-soft">
+                  {b.memberCount} contact{b.memberCount > 1 ? "s" : ""}
+                </span>
+                {on && <span className="text-signal">✓</span>}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {err && (
         <p className="text-sm font-semibold mb-2 text-refuse whitespace-pre-line">

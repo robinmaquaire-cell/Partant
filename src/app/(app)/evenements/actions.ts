@@ -37,6 +37,9 @@ export type EventInput = {
   collaborative: boolean;
   tags: string[];
   listIds: string[];
+  // Listes de diffusion à pousser à la création (uniquement à la création :
+  // ignorées en édition — on ne veut pas re-notifier tout le monde).
+  broadcastListIds?: string[];
   equipment: EquipmentDraft[];
   roles: RoleDraft[];
 };
@@ -83,6 +86,8 @@ function checkEventInput(input: EventInput): string | null {
     return "Le nombre max de participants doit être entre 0 (illimité) et 1000.";
   // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
+  if ((input.broadcastListIds ?? []).some((id) => !UUID_RE.test(id)))
+    return "Requête invalide.";
   if (input.tags.length > 8)
     return "Pas plus de 8 tags par événement.";
   if (input.tags.some((t) => t.trim().length > 30))
@@ -173,6 +178,18 @@ export async function createEvent(
         "La création a échoué. Réessaie dans un instant."
       ),
     };
+
+  // Pousser l'événement aux listes de diffusion sélectionnées : chaque membre
+  // devient event_guest (n'échoue pas silencieusement mais ne bloque pas la
+  // création si une seule liste plante).
+  for (const broadcastId of input.broadcastListIds ?? []) {
+    const { error: pushErr } = await supabase.rpc(
+      "push_event_to_broadcast_list",
+      { p_event: data, p_list: broadcastId }
+    );
+    if (pushErr)
+      console.error("[partant] push liste de diffusion :", pushErr.message);
+  }
 
   // Prévenir les membres par e-mail (ne bloque jamais la création).
   await notifyEventCreated(data);
