@@ -28,6 +28,17 @@ export async function updateProfile(input: {
   if (!EMAIL_RE.test(contact))
     return { ok: false, error: "Cette adresse e-mail n'est pas valide." };
 
+  // Le pseudo doit être unique (insensible à la casse). On prévient tout de
+  // suite ; l'index en base reste le garde-fou en cas de course.
+  const { data: available } = await supabase.rpc("pseudo_available", {
+    p_pseudo: pseudo,
+  });
+  if (available === false)
+    return {
+      ok: false,
+      error: "Ce pseudo est déjà pris — choisis-en un autre.",
+    };
+
   const { error } = await supabase
     .from("profiles")
     .update({
@@ -41,7 +52,10 @@ export async function updateProfile(input: {
   if (error)
     return {
       ok: false,
-      error: "La sauvegarde a échoué. Réessaie dans un instant.",
+      error:
+        error.code === "23505"
+          ? "Ce pseudo est déjà pris — choisis-en un autre."
+          : "La sauvegarde a échoué. Réessaie dans un instant.",
     };
 
   revalidatePath("/", "layout");

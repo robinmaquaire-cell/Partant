@@ -64,6 +64,19 @@ export function JoinSignupForm({
     setErr("");
     setSending(true);
     const supabase = createClient();
+
+    // Nouveau compte : le pseudo doit être libre (unicité).
+    if (mode === "nouveau") {
+      const { data: available } = await supabase.rpc("pseudo_available", {
+        p_pseudo: pseudo.trim(),
+      });
+      if (available === false) {
+        setSending(false);
+        setErr("Ce pseudo est déjà pris — choisis-en un autre.");
+        return;
+      }
+    }
+
     const { error } = await supabase.auth.signInWithOtp({
       email: value,
       options: {
