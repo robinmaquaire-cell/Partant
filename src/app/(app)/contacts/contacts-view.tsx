@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { Avatar } from "@/components/avatar";
 import { addContact, removeContact, setContactBlocked } from "./actions";
+import { InviteLinkBox } from "./invite-link-box";
 
 export type Contact = {
   id: string;
@@ -18,7 +19,13 @@ export type Contact = {
 const inputCls =
   "w-full bg-card border-[1.5px] border-line rounded-xl px-3 py-2.5 text-[15px] text-ink outline-none focus:border-river";
 
-export function ContactsView({ contacts }: { contacts: Contact[] }) {
+export function ContactsView({
+  contacts,
+  inviteToken,
+}: {
+  contacts: Contact[];
+  inviteToken: string | null;
+}) {
   const [query, setQuery] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
@@ -65,6 +72,8 @@ export function ContactsView({ contacts }: { contacts: Contact[] }) {
         Les gens croisés dans tes groupes et tes événements, plus ceux que tu
         ajoutes toi-même.
       </p>
+
+      {inviteToken && <InviteLinkBox token={inviteToken} />}
 
       {/* Ajout manuel */}
       <div className="rounded-2xl p-3 mb-4 bg-card border-[1.5px] border-line">

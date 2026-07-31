@@ -19,7 +19,10 @@ export default async function ContactsPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/connexion");
 
-  const { data } = await supabase.rpc("my_contacts");
+  const [{ data }, { data: token }] = await Promise.all([
+    supabase.rpc("my_contacts"),
+    supabase.rpc("get_contact_invite_token"),
+  ]);
   const contacts: Contact[] = ((data ?? []) as ContactRow[]).map((c) => ({
     id: c.contact_id,
     pseudo: c.pseudo || "(sans pseudo)",
@@ -30,5 +33,5 @@ export default async function ContactsPage() {
     viaEvent: c.via_event,
   }));
 
-  return <ContactsView contacts={contacts} />;
+  return <ContactsView contacts={contacts} inviteToken={(token as string) ?? null} />;
 }
