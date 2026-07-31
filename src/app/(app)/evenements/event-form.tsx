@@ -139,6 +139,8 @@ export function EventForm({
   const [listIds, setListIds] = useState<string[]>(init?.listIds ?? []);
   // Les listes de diffusion sont propres à la création (jamais en édition).
   const [broadcastIds, setBroadcastIds] = useState<string[]>([]);
+  // Contacts sélectionnés dans « Qui est dispo ? » — invités à la création.
+  const [invitedIds, setInvitedIds] = useState<string[]>([]);
 
   // Ajoute/retire un tag (casse et espaces ignorés pour comparer).
   const toggleTag = (raw: string) => {
@@ -350,6 +352,7 @@ export function EventForm({
         tags,
         listIds,
         broadcastListIds: edit ? undefined : broadcastIds,
+        invitedContactIds: edit ? undefined : invitedIds,
         equipment: allEquipment,
         roles: allRoles,
       };
@@ -931,7 +934,13 @@ export function EventForm({
       )}
 
       {!edit && (
-        <ContactAvailability contacts={contacts} date={date} time={time} />
+        <ContactAvailability
+          contacts={contacts}
+          date={date}
+          time={time}
+          invitedIds={invitedIds}
+          onInvitedChange={setInvitedIds}
+        />
       )}
 
       <div className="mb-3">

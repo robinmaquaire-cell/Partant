@@ -40,6 +40,8 @@ export type EventInput = {
   // Listes de diffusion à pousser à la création (uniquement à la création :
   // ignorées en édition — on ne veut pas re-notifier tout le monde).
   broadcastListIds?: string[];
+  // Contacts à inviter individuellement à la création (event_guests).
+  invitedContactIds?: string[];
   equipment: EquipmentDraft[];
   roles: RoleDraft[];
 };
@@ -87,6 +89,8 @@ function checkEventInput(input: EventInput): string | null {
   // Aucune liste = événement partagé uniquement par son lien de partage.
   if (input.listIds.some((id) => !UUID_RE.test(id))) return "Requête invalide.";
   if ((input.broadcastListIds ?? []).some((id) => !UUID_RE.test(id)))
+    return "Requête invalide.";
+  if ((input.invitedContactIds ?? []).some((id) => !UUID_RE.test(id)))
     return "Requête invalide.";
   if (input.tags.length > 8)
     return "Pas plus de 8 tags par événement.";
@@ -189,6 +193,17 @@ export async function createEvent(
     );
     if (pushErr)
       console.error("[partant] push liste de diffusion :", pushErr.message);
+  }
+
+  // Inviter les contacts cochés dans la section « Qui est dispo ? » : eux
+  // aussi rejoignent l'événement comme event_guest.
+  if ((input.invitedContactIds ?? []).length > 0) {
+    const { error: inviteErr } = await supabase.rpc(
+      "invite_contacts_to_event",
+      { p_event: data, p_contacts: input.invitedContactIds }
+    );
+    if (inviteErr)
+      console.error("[partant] invitation contacts :", inviteErr.message);
   }
 
   // Prévenir les membres par e-mail (ne bloque jamais la création).

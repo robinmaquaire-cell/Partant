@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Avatar } from "@/components/avatar";
 import {
   checkAvailability,
@@ -12,8 +12,8 @@ export type ContactOption = { id: string; pseudo: string; avatarUrl: string | nu
 
 const lettres = ["D", "L", "M", "M", "J", "V", "S"];
 
-// Petite grille 7 jours (la veille + 6 jours) centrée sur la date de
-// l'événement, matin / aprem / soir occupé (rouge) ou libre (vert).
+// Grille 7 jours (la veille + 6 jours) centrée sur la date de l'événement,
+// matin / aprem / soir occupé (rouge) ou libre (vert).
 function Grid({ date, slots }: { date: string; slots: { start: string; end: string }[] }) {
   const parsed = slots.map((s) => [new Date(s.start), new Date(s.end)] as const);
   const [y, mo, d] = date.split("-").map(Number);
@@ -61,26 +61,43 @@ function Grid({ date, slots }: { date: string; slots: { start: string; end: stri
   );
 }
 
-const badge: Record<Availability, { text: string; cls: string }> = {
-  busy: { text: "Pas dispo", cls: "bg-refuse/10 text-refuse" },
-  free: { text: "Dispo ✓", cls: "bg-ok/15 text-ok" },
-  unknown: { text: "Agenda non partagé", cls: "bg-sand text-ink-soft" },
-};
+// Petite pastille colorée qui résume la dispo.
+function Pill({ status, loading }: { status: Availability; loading: boolean }) {
+  if (loading)
+    return (
+      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-sand text-ink-soft">
+        …
+      </span>
+    );
+  const map: Record<Availability, { text: string; cls: string }> = {
+    busy: { text: "Pas dispo", cls: "bg-refuse/10 text-refuse" },
+    free: { text: "Dispo ✓", cls: "bg-ok/15 text-ok" },
+    unknown: { text: "Inconnu", cls: "bg-sand text-ink-soft" },
+  };
+  const b = map[status];
+  return (
+    <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${b.cls}`}>
+      {b.text}
+    </span>
+  );
+}
 
 export function ContactAvailability({
   contacts,
   date,
   time,
+  invitedIds,
+  onInvitedChange,
 }: {
   contacts: ContactOption[];
   date: string;
   time: string;
+  invitedIds: string[]; // état porté par le formulaire parent
+  onInvitedChange: (ids: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [results, setResults] = useState<Record<string, Availability> | null>(null);
-  // Créneau pour lequel les résultats ont été calculés : si la date/heure
-  // change ensuite, la réponse est « périmée » et on invite à revérifier.
+  const [results, setResults] = useState<Record<string, Availability>>({});
+  // Créneau pour lequel les résultats ont été calculés.
   const [checkedFor, setCheckedFor] = useState("");
   const [err, setErr] = useState("");
   const [pending, startTransition] = useTransition();
@@ -89,28 +106,32 @@ export function ContactAvailability({
   const [grid, setGrid] = useState<{ start: string; end: string }[]>([]);
   const [gridBusy, startGridTransition] = useTransition();
 
-  const stale = results !== null && checkedFor !== `${date} ${time}`;
+  const key = `${date} ${time}`;
 
-  const toggle = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const check = () =>
+  // Auto-charge les dispos dès que la section est ouverte et que
+  // date + heure sont saisies. Se déclenche aussi quand la date/heure
+  // ou la liste de contacts change.
+  useEffect(() => {
+    if (!open || !date || contacts.length === 0) return;
+    if (checkedFor === key) return;
     startTransition(async () => {
       setErr("");
-      setGridFor(null);
-      const r = await checkAvailability(date, time, [...selected]);
+      const r = await checkAvailability(date, time, contacts.map((c) => c.id));
       if (!r.ok) {
         setErr(r.error);
         return;
       }
       setResults(r.results);
-      setCheckedFor(`${date} ${time}`);
+      setCheckedFor(key);
     });
+  }, [open, date, time, contacts, checkedFor, key]);
+
+  const toggleInvited = (id: string) => {
+    const next = invitedIds.includes(id)
+      ? invitedIds.filter((x) => x !== id)
+      : [...invitedIds, id];
+    onInvitedChange(next);
+  };
 
   const openGrid = (id: string) => {
     if (gridFor === id) {
@@ -127,6 +148,8 @@ export function ContactAvailability({
 
   if (contacts.length === 0) return null;
 
+  const invitedCount = invitedIds.length;
+
   return (
     <div className="rounded-2xl p-3 mb-3 bg-card border-[1.5px] border-line">
       {!open ? (
@@ -135,12 +158,24 @@ export function ContactAvailability({
           onClick={() => setOpen(true)}
           className="flex items-center gap-2 text-sm font-bold text-pine"
         >
-          👥 Qui est dispo ? (facultatif)
+          <span>👥 Inviter des contacts (facultatif)</span>
+          {invitedCount > 0 && (
+            <span className="text-xs font-bold px-1.5 py-0.5 rounded-full bg-signal text-white">
+              {invitedCount}
+            </span>
+          )}
         </button>
       ) : (
         <>
           <div className="flex items-center justify-between mb-1">
-            <div className="text-sm font-bold">👥 Disponibilité des contacts</div>
+            <div className="text-sm font-bold">
+              👥 Inviter des contacts
+              {invitedCount > 0 && (
+                <span className="ml-2 text-xs font-bold px-1.5 py-0.5 rounded-full bg-signal text-white">
+                  {invitedCount} sélectionné{invitedCount > 1 ? "s" : ""}
+                </span>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setOpen(false)}
@@ -152,95 +187,82 @@ export function ContactAvailability({
 
           {!date ? (
             <p className="text-xs text-ink-soft">
-              Choisis d&apos;abord une date (tout en haut) pour vérifier qui est
+              Choisis d&apos;abord une date (tout en haut) pour voir qui est
               disponible.
             </p>
           ) : (
             <>
               <p className="text-xs text-ink-soft mb-2">
-                Coche des contacts, puis vérifie s&apos;ils sont libres au
-                créneau. Tu ne vois qu&apos;occupé ou libre, jamais le détail.
+                Coche les contacts à inviter. La pastille indique s&apos;ils sont
+                libres au créneau ({time || "toute la journée"}). Tu ne vois
+                jamais le détail de leur agenda.
               </p>
-              <div className="flex gap-1.5 flex-wrap mb-2">
+
+              {err && (
+                <p className="text-xs mb-2 font-semibold text-refuse">{err}</p>
+              )}
+
+              <div className="rounded-xl border-[1.5px] border-line overflow-hidden">
                 {contacts.map((c) => {
-                  const on = selected.has(c.id);
+                  const on = invitedIds.includes(c.id);
+                  const status = results[c.id] ?? "unknown";
                   return (
-                    <button
+                    <div
                       key={c.id}
-                      type="button"
-                      onClick={() => toggle(c.id)}
-                      className={`flex items-center gap-1.5 pl-1 pr-2.5 py-1 rounded-full text-sm font-semibold border-[1.5px] ${
-                        on ? "bg-pine/10 border-pine text-pine" : "border-line text-ink-soft"
-                      }`}
+                      className="bg-card border-b-[1.5px] border-line last:border-b-0"
                     >
-                      <Avatar pseudo={c.pseudo} url={c.avatarUrl} size={22} />
-                      {c.pseudo} {on ? "✓" : ""}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => toggleInvited(c.id)}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 text-left"
+                      >
+                        <Avatar pseudo={c.pseudo} url={c.avatarUrl} size={30} />
+                        <span className="flex-1 font-semibold text-sm truncate">
+                          {c.pseudo}
+                        </span>
+                        <Pill status={status} loading={pending && !results[c.id]} />
+                        {status !== "unknown" && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openGrid(c.id);
+                            }}
+                            className="text-xs font-bold text-river px-1"
+                          >
+                            {gridFor === c.id ? "×" : "📅"}
+                          </button>
+                        )}
+                        <span
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-sm font-bold shrink-0 ${
+                            on
+                              ? "bg-signal text-white"
+                              : "border-[1.5px] border-line text-ink-soft"
+                          }`}
+                        >
+                          {on ? "✓" : "+"}
+                        </span>
+                      </button>
+                      {gridFor === c.id && (
+                        <div className="px-3 pb-2">
+                          {gridBusy ? (
+                            <p className="text-xs text-ink-soft">…</p>
+                          ) : (
+                            <Grid date={date} slots={grid} />
+                          )}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
 
-              <button
-                type="button"
-                onClick={check}
-                disabled={pending || selected.size === 0}
-                className="px-3 py-2 rounded-xl text-sm font-bold text-white bg-pine disabled:opacity-60"
-              >
-                {pending ? "Vérification…" : "Vérifier les disponibilités"}
-              </button>
-              {err && (
-                <p className="text-xs mt-2 font-semibold text-refuse">{err}</p>
-              )}
-
-              {stale && (
-                <p className="text-xs mt-2 font-semibold text-signal">
-                  Tu as changé la date ou l&apos;heure — revérifie pour mettre à
-                  jour les disponibilités.
+              {invitedCount > 0 && (
+                <p className="text-xs mt-2 text-ink-soft">
+                  Ces {invitedCount} personne{invitedCount > 1 ? "s" : ""}{" "}
+                  {invitedCount > 1 ? "seront invitées" : "sera invitée"}
+                  {" "}à l&apos;événement à sa création.
                 </p>
-              )}
-
-              {results && !stale && (
-                <div className="mt-3 space-y-1.5">
-                  {contacts
-                    .filter((c) => selected.has(c.id))
-                    .map((c) => {
-                      const status = results[c.id] ?? "unknown";
-                      const b = badge[status];
-                      return (
-                        <div key={c.id}>
-                          <div className="flex items-center gap-2">
-                            <Avatar pseudo={c.pseudo} url={c.avatarUrl} size={26} />
-                            <span className="text-sm font-semibold flex-1 truncate">
-                              {c.pseudo}
-                            </span>
-                            <span
-                              className={`text-xs font-bold px-2 py-0.5 rounded-full ${b.cls}`}
-                            >
-                              {b.text}
-                            </span>
-                            {status !== "unknown" && (
-                              <button
-                                type="button"
-                                onClick={() => openGrid(c.id)}
-                                className="text-xs font-bold text-river"
-                              >
-                                {gridFor === c.id ? "masquer" : "sa grille"}
-                              </button>
-                            )}
-                          </div>
-                          {gridFor === c.id && (
-                            <div className="pl-8">
-                              {gridBusy ? (
-                                <p className="text-xs text-ink-soft mt-1">…</p>
-                              ) : (
-                                <Grid date={date} slots={grid} />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
-                </div>
               )}
             </>
           )}
