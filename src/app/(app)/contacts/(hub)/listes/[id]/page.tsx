@@ -13,6 +13,7 @@ type ListRow = {
   name: string;
   color: string;
   emoji: string | null;
+  visibility: "private" | "public";
   member_contact_ids: string[];
 };
 
@@ -56,6 +57,7 @@ export default async function ModifierListeDiffusionPage(props: {
         name: list.name,
         color: list.color,
         emoji: list.emoji,
+        visibility: list.visibility ?? "private",
         contactIds: list.member_contact_ids ?? [],
       }}
       mode={{ edit: true, id: list.id }}

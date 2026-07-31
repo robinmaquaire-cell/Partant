@@ -33,6 +33,7 @@ export default async function NouvelleListeDiffusionPage() {
         name: "",
         color: LIST_COLORS[0],
         emoji: null,
+        visibility: "private",
         contactIds: [],
       }}
       mode={{ edit: false }}

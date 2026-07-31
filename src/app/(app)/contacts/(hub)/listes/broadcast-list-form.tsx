@@ -22,6 +22,8 @@ type Mode =
   | { edit: false }
   | { edit: true; id: string };
 
+type Visibility = "private" | "public";
+
 export function BroadcastListForm({
   contacts,
   initial,
@@ -32,6 +34,7 @@ export function BroadcastListForm({
     name: string;
     color: string;
     emoji: string | null;
+    visibility: Visibility;
     contactIds: string[];
   };
   mode: Mode;
@@ -40,10 +43,12 @@ export function BroadcastListForm({
   const [name, setName] = useState(initial.name);
   const [color, setColor] = useState(initial.color);
   const [emoji, setEmoji] = useState<string | null>(initial.emoji);
+  const [visibility, setVisibility] = useState<Visibility>(initial.visibility);
   const [selected, setSelected] = useState<Set<string>>(
     new Set(initial.contactIds)
   );
   const [search, setSearch] = useState("");
+  const [copied, setCopied] = useState(false);
   const [err, setErr] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -68,6 +73,7 @@ export function BroadcastListForm({
         name,
         color,
         emoji,
+        visibility,
         contactIds: [...selected],
       };
       const result = mode.edit
@@ -76,6 +82,18 @@ export function BroadcastListForm({
       // En cas de succès, l'action redirige : on n'arrive ici qu'en erreur.
       if (result && !result.ok) setErr(result.error);
     });
+
+  const copyLink = async () => {
+    if (!mode.edit) return;
+    const url = `${window.location.origin}/l/${mode.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2200);
+    } catch {
+      setErr(`Copie ce lien à la main : ${url}`);
+    }
+  };
 
   const doDelete = () =>
     startTransition(async () => {
@@ -144,9 +162,63 @@ export function BroadcastListForm({
       </div>
 
       <div className="mb-3">
-        <div className={label}>
-          Contacts{selected.size > 0 ? ` — ${selected.size}` : ""}
+        <div className={label}>Visibilité</div>
+        <div className="flex gap-2">
+          {(
+            [
+              { v: "private" as const, label: "🔒 Privée" },
+              { v: "public" as const, label: "🌍 Publique" },
+            ]
+          ).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              onClick={() => setVisibility(o.v)}
+              className={`flex-1 py-2 rounded-xl text-sm font-bold border-[1.5px] ${
+                visibility === o.v
+                  ? "bg-ink text-paper border-ink"
+                  : "text-ink-soft border-line"
+              }`}
+            >
+              {o.label}
+            </button>
+          ))}
         </div>
+        <p className="text-xs mt-1 text-ink-soft">
+          {visibility === "private"
+            ? "Personne d'autre que toi ne voit cette liste. Tu choisis toi-même qui en fait partie."
+            : "Chacun·e avec le lien peut la rejoindre. Toi seul·e y pousses des événements."}
+        </p>
+      </div>
+
+      {mode.edit && visibility === "public" && (
+        <div className="rounded-2xl p-3 mb-3 bg-card border-[1.5px] border-line">
+          <div className={label}>Lien à partager</div>
+          <button
+            type="button"
+            onClick={copyLink}
+            className="w-full px-4 py-2.5 rounded-xl font-bold bg-ink text-paper transition-transform active:scale-95"
+          >
+            {copied ? "Lien copié ✓" : "🔗 Copier le lien de la liste"}
+          </button>
+          <p className="text-xs mt-1 text-center text-ink-soft">
+            Colle-le où tu veux : les personnes qui l&apos;ouvrent pourront
+            rejoindre la liste (et créer un compte au passage).
+          </p>
+        </div>
+      )}
+
+      <div className="mb-3">
+        <div className={label}>
+          {visibility === "public" ? "Membres pré-inscrits" : "Contacts"}
+          {selected.size > 0 ? ` — ${selected.size}` : ""}
+        </div>
+        {visibility === "public" && (
+          <p className="text-xs mb-2 text-ink-soft">
+            Ces personnes seront ajoutées d&apos;office. D&apos;autres peuvent
+            aussi rejoindre plus tard via le lien.
+          </p>
+        )}
         {contacts.length === 0 ? (
           <p className="text-sm text-ink-soft">
             Tu n&apos;as pas encore de contacts. Ajoute des contacts d&apos;abord
