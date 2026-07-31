@@ -10,6 +10,12 @@ import { OrganizersSection } from "./organizers-section";
 import { RolesSection } from "./roles-section";
 import { ShareSection } from "./share-section";
 import { ShareButton } from "./share-button";
+import {
+  type ShareBroadcast,
+  type ShareContact,
+  type ShareGroup,
+} from "./share-modal";
+import { checkAvailability } from "../availability-actions";
 import { LocationActions } from "./location-actions";
 import { ChatSection, type ChatMessage } from "./chat-section";
 
@@ -227,6 +233,118 @@ export default async function EvenementDetailPage(props: {
         .join(", "),
     }));
 
+  // Données de la modale de partage : uniquement pour l'organisateur.
+  // On récupère ses groupes, ses listes de diffusion, ses contacts,
+  // qui est déjà invité, et une pastille de dispo pour chacun.
+  let shareGroups: ShareGroup[] = [];
+  let shareBroadcasts: ShareBroadcast[] = [];
+  let shareContacts: ShareContact[] = [];
+  if (isOrganizer) {
+    const [
+      { data: myGroups },
+      { data: myBroadcasts },
+      { data: myContacts },
+      { data: guestRows },
+    ] = await Promise.all([
+      supabase.rpc("my_lists"),
+      supabase.rpc("my_broadcast_lists"),
+      supabase.rpc("my_contacts"),
+      supabase.from("event_guests").select("user_id").eq("event_id", ev.id),
+    ]);
+    const groupsRows = (myGroups ?? []) as {
+      id: string;
+      name: string;
+      color: string;
+      emoji: string | null;
+      logo_url: string | null;
+      member_count: number;
+    }[];
+    const broadcastsRows = (myBroadcasts ?? []) as {
+      id: string;
+      name: string;
+      color: string;
+      emoji: string | null;
+      member_count: number;
+    }[];
+    const contactsRows = ((myContacts ?? []) as {
+      contact_id: string;
+      pseudo: string | null;
+      avatar_url: string | null;
+      blocked: boolean;
+    }[]).filter((c) => !c.blocked);
+
+    const attachedGroupIds = new Set(lists.map((l) => l.id));
+    const invitedUserIds = new Set(
+      ((guestRows ?? []) as { user_id: string }[]).map((g) => g.user_id)
+    );
+
+    // Dispo des contacts et des membres des groupes en une seule vérif.
+    const groupMemberByList: Record<string, string[]> = {};
+    const allMemberIds: string[] = [];
+    if (groupsRows.length > 0) {
+      const { data: memberRows } = await supabase.rpc("group_member_ids", {
+        p_lists: groupsRows.map((g) => g.id),
+      });
+      for (const row of (memberRows ?? []) as {
+        list_id: string;
+        user_id: string;
+      }[]) {
+        (groupMemberByList[row.list_id] ||= []).push(row.user_id);
+        if (row.user_id !== user.id) allMemberIds.push(row.user_id);
+      }
+    }
+    const contactIds = contactsRows.map((c) => c.contact_id);
+    const idsToCheck = [...new Set([...contactIds, ...allMemberIds])];
+
+    let availabilityMap: Record<string, "busy" | "free" | "unknown"> = {};
+    if (idsToCheck.length > 0) {
+      const r = await checkAvailability(
+        ev.event_date,
+        ev.event_time.slice(0, 5),
+        idsToCheck
+      );
+      if (r.ok) availabilityMap = r.results;
+    }
+
+    shareGroups = groupsRows.map((g) => {
+      const members = groupMemberByList[g.id] ?? [];
+      // On compte comme « libre » ceux dont l'agenda dit explicitement
+      // « free ». Les inconnus (pas d'agenda relié) ne comptent pas.
+      const freeCount = members.filter(
+        (m) => availabilityMap[m] === "free"
+      ).length;
+      const hasAnyKnown = members.some(
+        (m) => availabilityMap[m] === "free" || availabilityMap[m] === "busy"
+      );
+      return {
+        id: g.id,
+        name: g.name,
+        color: g.color,
+        emoji: g.emoji,
+        logoUrl: g.logo_url,
+        memberCount: g.member_count,
+        freeCount: hasAnyKnown ? freeCount : null,
+        attached: attachedGroupIds.has(g.id),
+      };
+    });
+
+    shareBroadcasts = broadcastsRows.map((b) => ({
+      id: b.id,
+      name: b.name,
+      color: b.color,
+      emoji: b.emoji,
+      memberCount: b.member_count,
+    }));
+
+    shareContacts = contactsRows.map((c) => ({
+      id: c.contact_id,
+      pseudo: c.pseudo || "(sans pseudo)",
+      avatarUrl: c.avatar_url,
+      availability: availabilityMap[c.contact_id] ?? "unknown",
+      alreadyInvited: invitedUserIds.has(c.contact_id),
+    }));
+  }
+
   return (
     <div className="pb-40">
       <div className="flex items-center justify-between mb-3">
@@ -237,6 +355,11 @@ export default async function EvenementDetailPage(props: {
           path={shareToken ? `/e/${shareToken}` : "/"}
           title={ev.title}
           withInvite={shareToken !== null}
+          eventId={ev.id}
+          isOrganizer={isOrganizer}
+          groups={shareGroups}
+          broadcasts={shareBroadcasts}
+          contacts={shareContacts}
         />
       </div>
 

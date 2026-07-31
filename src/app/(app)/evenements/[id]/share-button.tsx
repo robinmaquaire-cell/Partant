@@ -1,23 +1,42 @@
 "use client";
 
 import { useState } from "react";
+import {
+  ShareModal,
+  type ShareBroadcast,
+  type ShareContact,
+  type ShareGroup,
+} from "./share-modal";
 
-// Bouton « Partager » en haut de la page d'un événement : ouvre le partage
-// natif du téléphone (WhatsApp, SMS, e-mail…) ou copie le lien.
-// Le lien mène à l'événement et permet de créer un compte au passage.
+// Bouton « Partager » en haut de la page d'un événement.
+// Pour l'organisateur : ouvre la modale complète (lien + groupes + listes
+// de diffusion + contacts avec dispo).
+// Pour les autres participants : partage natif du système (WhatsApp, SMS,
+// e-mail…), ou copie du lien en dernier recours.
 export function ShareButton({
   path,
   title,
   withInvite,
+  eventId,
+  isOrganizer,
+  groups,
+  broadcasts,
+  contacts,
 }: {
   path: string; // « /e/<jeton> » si un lien d'invitation existe, sinon « / »
   title: string;
   withInvite: boolean;
+  eventId: string;
+  isOrganizer: boolean;
+  groups?: ShareGroup[];
+  broadcasts?: ShareBroadcast[];
+  contacts?: ShareContact[];
 }) {
+  const [modalOpen, setModalOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [manual, setManual] = useState("");
 
-  const share = async () => {
+  const shareNatively = async () => {
     const url = `${window.location.origin}${path}`;
     const text = withInvite
       ? `Partants ? « ${title} » — rejoins-nous :`
@@ -40,11 +59,15 @@ export function ShareButton({
     }
   };
 
+  const onClick = isOrganizer ? () => setModalOpen(true) : shareNatively;
+  const shareUrl =
+    typeof window !== "undefined" ? `${window.location.origin}${path}` : path;
+
   return (
     <>
       <button
         type="button"
-        onClick={share}
+        onClick={onClick}
         className="px-3 py-1.5 text-sm rounded-xl font-bold text-ink-soft border-[1.5px] border-line bg-card transition-transform active:scale-95"
       >
         {copied ? "Lien copié ✓" : "🔗 Partager"}
@@ -53,6 +76,16 @@ export function ShareButton({
         <p className="text-xs mt-1 font-semibold text-ink-soft break-all">
           Copie ce lien : {manual}
         </p>
+      )}
+      {modalOpen && isOrganizer && (
+        <ShareModal
+          eventId={eventId}
+          shareUrl={shareUrl}
+          groups={groups ?? []}
+          broadcasts={broadcasts ?? []}
+          contacts={contacts ?? []}
+          onClose={() => setModalOpen(false)}
+        />
       )}
     </>
   );
