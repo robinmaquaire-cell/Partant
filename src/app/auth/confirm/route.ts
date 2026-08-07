@@ -56,6 +56,21 @@ export async function GET(request: Request) {
   const rawNext = searchParams.get("next") ?? "/";
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
+  // Lien déjà mort (remplacé ou expiré) : Supabase renvoie ici sans jeton,
+  // avec un code d'erreur dans l'URL. On affiche l'explication qui va bien.
+  if (!tokenHash && !code && searchParams.get("error_code")) {
+    return NextResponse.redirect(
+      new URL(
+        `/connexion?erreur=${
+          searchParams.get("error_code") === "otp_expired"
+            ? "lien-expire"
+            : "lien-invalide"
+        }`,
+        origin
+      )
+    );
+  }
+
   const supabase = await createClient();
   let derniereErreur: { code?: string } | null = null;
 
