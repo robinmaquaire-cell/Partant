@@ -7,6 +7,23 @@ export async function proxy(request: NextRequest) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // Selon la configuration des redirections côté Supabase, un lien de
+  // connexion reçu par e-mail peut atterrir sur la racine ou sur /connexion
+  // au lieu de /auth/confirm. On le remet sur le bon chemin, en gardant
+  // tous les paramètres, pour que la session s'ouvre proprement.
+  const params = request.nextUrl.searchParams;
+  const carriesAuthToken =
+    params.has("code") || (params.has("token_hash") && params.has("type"));
+  if (
+    carriesAuthToken &&
+    (request.nextUrl.pathname === "/" ||
+      request.nextUrl.pathname === "/connexion")
+  ) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/confirm";
+    return NextResponse.redirect(url);
+  }
+
   // Supabase pas encore configuré : on laisse passer, la page de
   // connexion affichera un message explicite.
   if (!supabaseUrl || !supabaseKey) {

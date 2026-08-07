@@ -93,7 +93,9 @@ export function JoinSignupForm({
       setErr(
         mode === "connexion" && /not allowed|signup/i.test(error.message)
           ? "Aucun compte avec cette adresse. Bascule sur « Créer mon compte »."
-          : "L'envoi a échoué. Réessaie dans une minute."
+          : error.status === 429
+            ? "Trop de liens ont été demandés cette heure-ci, l'envoi est bloqué momentanément. Réessaie dans une heure — ou connecte-toi avec ton mot de passe si tu en as un."
+            : "L'envoi a échoué. Réessaie dans une minute."
       );
       return;
     }
@@ -108,6 +110,11 @@ export function JoinSignupForm({
           Ouvre l&apos;e-mail reçu sur <strong>{email.trim()}</strong> et
           clique sur le lien : tu pourras rejoindre « {label} ». Ouvre-le
           sur cet appareil, avec ce navigateur.
+        </p>
+        <p className="text-xs mt-2 text-ink-soft">
+          L&apos;e-mail peut mettre quelques minutes à arriver. Si tu
+          redemandes un lien, seul le plus récent fonctionnera : clique
+          toujours sur le dernier e-mail reçu.
         </p>
       </div>
     );

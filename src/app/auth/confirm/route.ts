@@ -30,6 +30,21 @@ async function maybeSendWelcome(supabase: SupabaseClient) {
   }
 }
 
+// Traduit l'erreur Supabase en un code que la page de connexion sait
+// expliquer : lien remplacé/expiré, lien ouvert ailleurs, ou lien cassé.
+function slugErreur(error: { code?: string } | null): string {
+  switch (error?.code) {
+    case "otp_expired":
+      return "lien-expire";
+    case "bad_code_verifier":
+    case "flow_state_not_found":
+    case "flow_state_expired":
+      return "autre-navigateur";
+    default:
+      return "lien-invalide";
+  }
+}
+
 // Point d'arrivée du lien magique : vérifie le jeton reçu par e-mail
 // puis ouvre la session et renvoie vers l'application.
 export async function GET(request: Request) {
@@ -42,6 +57,7 @@ export async function GET(request: Request) {
   const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/";
 
   const supabase = await createClient();
+  let derniereErreur: { code?: string } | null = null;
 
   if (tokenHash && type) {
     const { error } = await supabase.auth.verifyOtp({
@@ -52,6 +68,7 @@ export async function GET(request: Request) {
       await maybeSendWelcome(supabase);
       return NextResponse.redirect(new URL(next, origin));
     }
+    derniereErreur = error;
   }
 
   if (code) {
@@ -60,9 +77,10 @@ export async function GET(request: Request) {
       await maybeSendWelcome(supabase);
       return NextResponse.redirect(new URL(next, origin));
     }
+    derniereErreur = error;
   }
 
   return NextResponse.redirect(
-    new URL("/connexion?erreur=lien-invalide", origin)
+    new URL(`/connexion?erreur=${slugErreur(derniereErreur)}`, origin)
   );
 }
